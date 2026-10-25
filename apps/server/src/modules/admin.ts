@@ -4,6 +4,8 @@ import { prisma } from '../db.js';
 import { badRequest, forbidden, notFound, parse } from '../lib/errors.js';
 import { hashPassword } from '../lib/passwords.js';
 import { audit } from '../lib/audit.js';
+import { createSampleProject } from '../lib/sampleProject.js';
+import { backupsRouter } from './backups.js';
 import { paging } from '../lib/util.js';
 import { requireOrgAdmin, requireSessionAuth } from '../middleware/auth.js';
 import { passwordSchema } from './auth.js';
@@ -180,6 +182,11 @@ adminRouter.post('/teams/:id/add-to-project', async (req, res) => {
 
 // Organization settings ------------------------------------------------------
 
+adminRouter.post('/sample-project', async (req, res) => {
+  const project = await createSampleProject(req.user!.orgId, req.user!.id);
+  res.status(201).json({ project: { id: project.id, key: project.key, name: project.name } });
+});
+
 adminRouter.get('/settings', async (req, res) => {
   const org = await prisma.organization.findUniqueOrThrow({ where: { id: req.user!.orgId } });
   res.json({ org: { id: org.id, name: org.name, slug: org.slug, settings: { allowMemberProjectCreation: false, ...(org.settings as object) } } });
@@ -265,3 +272,5 @@ adminRouter.get('/export', async (req, res) => {
   res.setHeader('Content-Disposition', `attachment; filename="explorix-export-${new Date().toISOString().slice(0, 10)}.json"`);
   res.json({ format: 'explorix-export', version: 1, exportedAt: new Date().toISOString(), users, templates, projects });
 });
+
+adminRouter.use('/backups', backupsRouter);

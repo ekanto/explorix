@@ -5,7 +5,7 @@
 ```
 ┌────────────────────────────┐        ┌───────────────────────────────────────────────┐       ┌──────────────┐
 │ Browser (React SPA)        │  /api  │ Express API (Node.js, TypeScript)             │ Prisma│ PostgreSQL   │
-│ Mantine UI · TanStack Query├───────►│ auth → access → module routers → services     ├──────►│ (49 tables)  │
+│ Mantine UI · TanStack Query├───────►│ auth → access → module routers → services     ├──────►│ (52 tables)  │
 │ TipTap · Mantine Charts    │ cookie │ zod validation · audit · webhooks · AI layer  │       └──────────────┘
 └────────────────────────────┘        │                                               │       ┌──────────────┐
           ▲ CI / scripts ─────────────► Bearer API token (ingestion, read APIs)        ├──────►│ File storage │
@@ -16,8 +16,9 @@
 ```
 
 - **Monorepo** (npm workspaces):
-  - `apps/server`: API, Prisma schema, migrations, seed.
+  - `apps/server`: API, Prisma schema, migrations, seed, reporting engine.
   - `apps/web`: React SPA.
+  - `apps/desktop`: Electron shell for the Windows desktop app (see §8).
   - `e2e`: Playwright tests.
 - **Single origin in production.** Express serves the built SPA from `apps/web/dist`, so the session cookie stays first-party (`SameSite=Lax`) and no CORS configuration is needed.
 - **Development.** Vite (:5173) proxies `/api` to the API (:4000). PostgreSQL comes from the `embedded-postgres` npm package (:54329), so no system install or Docker is needed. Any external PostgreSQL 14+ also works.
@@ -227,3 +228,39 @@ The **Workbench** (`pages/exploratory/Workbench.tsx`) is the signature screen. I
 - **E2E (Playwright)** in `e2e/`.
   - Starts an isolated API on :4100 with a freshly migrated and seeded `<db>_e2e` database, plus Vite on :5174.
   - Drives the real UI: sign-in, access control, the full workbench lifecycle (launch, notes persistence across reloads, findings with evidence, pause/resume, finish, review), charter create/edit/duplicate/archive, session bulk assignment, findings exports vs API, dashboard KPIs vs persisted records, and a smoke pass over every screen that fails on console errors, uncaught exceptions or 5xx responses.
+
+## 8. Desktop architecture (2.0)
+
+Explorix Desktop reuses the server and web app unchanged. The Electron main process hosts them; it does not reimplement them.
+
+```
+Explorix.exe (Electron main process)
+├─ boot.ts      settings → start embedded PostgreSQL (pg.ts, 127.0.0.1, random port, DPAPI-stored password)
+│               → safety backup + Prisma migrations (migrate.ts) → import server bundle in-process
+├─ server       resources/server/server.mjs: the same Express app, listening on 127.0.0.1:<random>,
+│               DESKTOP=true: loopback Host check, desktop PDF renderer, data in %APPDATA%\Explorix
+├─ main.ts      BrowserWindow → http://127.0.0.1:<port> (the built web app), menu, single-instance lock,
+│               navigation/permission guards, IPC handlers, graceful shutdown (server → PostgreSQL)
+├─ preload.ts   contextBridge: window.explorixDesktop (15 named functions plus a navigation listener)
+├─ contract.ts  zod schema per IPC channel; trusted-sender (origin) check
+├─ export.ts    Save As / overwrite confirmation / atomic copy of report job outputs to the user's chosen path
+├─ pdf.ts       printToPDF in a hidden, sandboxed, offline window (the server's PDF renderer hook)
+└─ settings.ts  settings.json (atomic writes, corrupt-file quarantine), DPAPI secrets via safeStorage
+```
+
+Key decisions:
+- **In-process server.** The web UI detects the desktop through the preload bridge and keeps using the REST API. The UI and business logic are shared, and the browser and desktop builds are tested by the same server and web suites.
+- **Embedded PostgreSQL instead of SQLite.** The Prisma schema depends on PostgreSQL features (enums, JSON columns, case-insensitive search, transactional DDL) and was already exercised by 70+ tests. Shipping the PostgreSQL 18 binaries (about 104 MB) avoided a risky dual-database migration. The cluster lives in `%APPDATA%\Explorix\data\pg`.
+- **Data version separate from the app version.** The latest applied migration is the data version. A newer data version than the app knows is refused with a recovery screen instead of corrupting data.
+- **The renderer never handles paths.** Reports are generated into a server work directory as *jobs*. The renderer asks the main process to save a job output by ID, and the main process shows the native dialog and copies the file.
+- **Packaging.** esbuild bundles main, preload and server. `scripts/build.mjs --stage` stages the runtime dependency closure and fails on unresolved imports. electron-builder builds NSIS and portable targets, and `afterPack` copies the server `node_modules`. See [DESKTOP.md](DESKTOP.md#building-from-source).
+
+### Reporting engine (`apps/server/src/reporting`)
+
+`model.ts` builds one structured `ReportModel` from the database for a scope (finding, findings, session, charter, milestone or project) and options (template sections, filters, evidence selection). The renderers consume only that model:
+- `docx.ts` uses the `docx` library;
+- `markdown.ts`;
+- `html.ts` (also the PDF source);
+- `pdf.ts` uses a pluggable renderer: Electron `printToPDF` on desktop, Playwright Chromium on a server (`PDF_RENDERER=playwright`).
+
+`assets.ts` prepares report-sized image copies, thumbnails and frames, and copies originals for folder outputs. `jobs.ts` runs generation asynchronously with progress, cancellation (AbortSignal), a free-space check, packages (folder or ZIP with `manifest.json` and README) and a 2-hour job TTL. See [REPORTING.md](REPORTING.md).

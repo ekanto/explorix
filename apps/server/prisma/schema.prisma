@@ -198,11 +198,12 @@ model Organization {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  members     OrgMember[]
-  teams       Team[]
-  projects    Project[]
-  templates   CharterTemplate[]
-  auditEvents AuditEvent[]
+  members         OrgMember[]
+  teams           Team[]
+  projects        Project[]
+  templates       CharterTemplate[]
+  auditEvents     AuditEvent[]
+  reportTemplates ReportTemplate[]
 }
 
 model User {
@@ -248,6 +249,9 @@ model User {
   testResults          TestResult[]
   templatesCreated     CharterTemplate[]
   auditEvents          AuditEvent[]
+  videoMarkers         VideoMarker[]
+  reportTemplates      ReportTemplate[]
+  reportRuns           ReportRun[]
 }
 
 model AuthSession {
@@ -372,6 +376,7 @@ model Project {
   apiTokens         ApiToken[]
   auditEvents       AuditEvent[]
   notifications     Notification[]
+  reportRuns        ReportRun[]
 
   @@unique([orgId, key])
 }
@@ -731,6 +736,10 @@ model Finding {
   expected              String?
   actual                String?
   environment           String?
+  browser               String?
+  preconditions         String?
+  followUp              String?
+  resolution            String?
   sessionElapsedSeconds Int?
   authorId              String
   author                User                  @relation("FindingAuthor", fields: [authorId], references: [id])
@@ -917,12 +926,120 @@ model Attachment {
   automationResultId String?
   automationResult   AutomationResult?   @relation(fields: [automationResultId], references: [id], onDelete: Cascade)
   createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @default(now()) @updatedAt
 
-  logEntries SessionLogEntry[]
+  // Evidence metadata (desktop/report engine). Derivatives (annotated copies,
+  // video frames, thumbnails) point at their original via derivedFromId and
+  // carry no target of their own; originals are never modified.
+  kind             EvidenceKind        @default(OTHER)
+  label            String?
+  description      String?
+  position         Int                 @default(0)
+  width            Int?
+  height           Int?
+  durationSeconds  Float?
+  derivedFromId    String?
+  derivedFrom      Attachment?         @relation("AttachmentDerivatives", fields: [derivedFromId], references: [id], onDelete: Cascade)
+  derivatives      Attachment[]        @relation("AttachmentDerivatives")
+  derivation       EvidenceDerivation?
+  frameTimeSeconds Float?
+  includeInReports Boolean             @default(true)
+  // Soft delete ("Trash"): file and links are kept until purged.
+  deletedAt        DateTime?
+
+  logEntries   SessionLogEntry[]
+  markers      VideoMarker[]     @relation("MarkerVideo")
+  markerFrames VideoMarker[]     @relation("MarkerFrame")
 
   @@index([sessionId])
   @@index([findingId])
   @@index([issueId])
+  @@index([derivedFromId])
+  @@index([projectId, deletedAt])
+}
+
+enum EvidenceKind {
+  IMAGE
+  VIDEO
+  DOCUMENT
+  OTHER
+}
+
+enum EvidenceDerivation {
+  ANNOTATED
+  FRAME
+  THUMBNAIL
+}
+
+/// An important moment in a video, optionally with a captured frame.
+model VideoMarker {
+  id           String      @id @default(cuid())
+  attachmentId String
+  attachment   Attachment  @relation("MarkerVideo", fields: [attachmentId], references: [id], onDelete: Cascade)
+  timeSeconds  Float
+  label        String
+  note         String?
+  frameId      String?
+  frame        Attachment? @relation("MarkerFrame", fields: [frameId], references: [id], onDelete: SetNull)
+  authorId     String?
+  author       User?       @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  createdAt    DateTime    @default(now())
+
+  @@index([attachmentId])
+}
+
+// ---------------------------------------------------------------------------
+// Reporting
+// ---------------------------------------------------------------------------
+
+enum ReportKind {
+  SESSION
+  BUG_INVESTIGATION
+  PROJECT_SUMMARY
+  RELEASE_READINESS
+  REGRESSION
+  SECURITY
+  EVIDENCE
+  CUSTOM
+}
+
+/// User-saved report configuration (built-in templates live in code).
+model ReportTemplate {
+  id          String       @id @default(cuid())
+  orgId       String
+  org         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name        String
+  kind        ReportKind
+  description String?
+  options     Json         @default("{}")
+  createdById String?
+  createdBy   User?        @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@unique([orgId, name])
+}
+
+/// History of generated reports; keeps the configuration so other formats can be regenerated.
+model ReportRun {
+  id            String     @id @default(cuid())
+  projectId     String
+  project       Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdById   String?
+  createdBy     User?      @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  title         String
+  kind          ReportKind
+  formats       String[]
+  scope         Json
+  options       Json
+  status        String
+  error         String?
+  findingCount  Int        @default(0)
+  evidenceCount Int        @default(0)
+  createdAt     DateTime   @default(now())
+  completedAt   DateTime?
+
+  @@index([projectId, createdAt])
 }
 
 model Notification {

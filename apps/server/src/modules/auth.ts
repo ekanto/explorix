@@ -1,12 +1,13 @@
-import { Router } from 'express';
+import { Router, type Request, type Response } from 'express';
 import { rateLimit } from 'express-rate-limit';
 import { z } from 'zod';
 import { prisma } from '../db.js';
 import { config } from '../config.js';
 import { AppError, badRequest, parse, unauthorized } from '../lib/errors.js';
-import { hashPassword, randomToken, sha256, verifyPassword } from '../lib/passwords.js';
+import { hashPassword, passwordSchema, randomToken, sha256, verifyPassword } from '../lib/passwords.js';
 import { SESSION_COOKIE, requireAuth, requireSessionAuth, setSessionCookie } from '../middleware/auth.js';
 import { audit } from '../lib/audit.js';
+import { provisionOrganization } from '../lib/bootstrap.js';
 
 export const authRouter = Router();
 
@@ -43,16 +44,43 @@ authRouter.post('/login', loginLimiter, async (req, res) => {
     throw generic();
   }
   if (!user.orgMemberships.length) throw generic();
+  await startSession(req, res, user.id);
+  res.json({ ok: true });
+});
+
+async function startSession(req: Request, res: Response, userId: string) {
   const token = randomToken();
   const expiresAt = new Date(Date.now() + config.SESSION_TTL_HOURS * 3600_000);
   await prisma.$transaction([
     prisma.authSession.create({
-      data: { tokenHash: sha256(token), userId: user.id, expiresAt, ip: req.ip, userAgent: req.get('user-agent')?.slice(0, 300) },
+      data: { tokenHash: sha256(token), userId, expiresAt, ip: req.ip, userAgent: req.get('user-agent')?.slice(0, 300) },
     }),
-    prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date(), failedLoginCount: 0, lockedUntil: null } }),
+    prisma.user.update({ where: { id: userId }, data: { lastLoginAt: new Date(), failedLoginCount: 0, lockedUntil: null } }),
   ]);
   setSessionCookie(res, token, expiresAt);
-  res.json({ ok: true });
+}
+
+/** First-run wizard (desktop / single-tenant installs): only usable while the database has no organization. */
+authRouter.get('/setup-status', async (_req, res) => {
+  const needsSetup = config.allowSetupWizard && (await prisma.organization.count()) === 0;
+  res.json({ needsSetup, desktop: config.isDesktop });
+});
+
+authRouter.post('/setup', loginLimiter, async (req, res) => {
+  if (!config.allowSetupWizard) throw new AppError(404, 'not_found', 'Not found');
+  const body = parse(
+    z.object({
+      orgName: z.string().trim().min(1).max(120),
+      name: z.string().trim().min(1).max(120),
+      email: z.string().trim().toLowerCase().email().max(200),
+      password: passwordSchema,
+    }),
+    req.body,
+  );
+  const created = await provisionOrganization({ ...body, source: 'org.setup' });
+  if (!created) throw new AppError(409, 'already_setup', 'Explorix has already been set up. Sign in instead.');
+  await startSession(req, res, created.user.id);
+  res.status(201).json({ ok: true });
 });
 
 authRouter.post('/logout', async (req, res) => {
@@ -65,7 +93,12 @@ authRouter.post('/logout', async (req, res) => {
 authRouter.get('/me', requireAuth, async (req, res) => {
   const u = req.user!;
   const org = await prisma.organization.findUnique({ where: { id: u.orgId }, select: { id: true, name: true, slug: true } });
-  res.json({ user: { id: u.id, email: u.email, name: u.name, avatarColor: u.avatarColor, orgRole: u.orgRole, preferences: u.preferences }, org });
+  res.json({
+    user: { id: u.id, email: u.email, name: u.name, avatarColor: u.avatarColor, orgRole: u.orgRole, preferences: u.preferences },
+    org,
+    desktop: config.isDesktop,
+    uploadLimits: { otherBytes: config.maxUploadBytes, imageBytes: config.maxImageBytes, videoBytes: config.maxVideoBytes },
+  });
 });
 
 const prefsSchema = z
@@ -97,11 +130,7 @@ authRouter.patch('/me', requireAuth, requireSessionAuth, async (req, res) => {
   res.json({ user: { id: updated.id, email: updated.email, name: updated.name, avatarColor: updated.avatarColor, preferences: updated.preferences } });
 });
 
-export const passwordSchema = z
-  .string()
-  .min(10, 'Password must be at least 10 characters')
-  .max(200)
-  .refine((p) => /[a-zA-Z]/.test(p) && /[0-9]/.test(p), 'Password must contain letters and numbers');
+export { passwordSchema };
 
 authRouter.post('/me/password', requireAuth, requireSessionAuth, async (req, res) => {
   const body = parse(z.object({ currentPassword: z.string().min(1), newPassword: passwordSchema }), req.body);

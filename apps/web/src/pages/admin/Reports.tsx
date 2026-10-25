@@ -33,6 +33,7 @@ import {
   IconFilterOff,
   IconJson,
   IconPrinter,
+  IconReportAnalytics,
   IconSparkles,
   IconX,
 } from '@tabler/icons-react';
@@ -112,6 +113,9 @@ export default function Reports() {
         subtitle="Exploratory, manual and automated testing metrics computed live from stored records."
         actions={
           <>
+            <Button leftSection={<IconReportAnalytics size={16} />} component={Link} to={`/projects/${pid}/reports/new`}>
+              New report
+            </Button>
             <Menu position="bottom-end" withinPortal>
               <Menu.Target>
                 <Button variant="default" leftSection={<IconDownload size={16} />}>

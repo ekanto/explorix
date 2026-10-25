@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:">
+<title>Explorix needs attention</title>
+<link rel="stylesheet" href="shell.css">
+</head>
+<body>
+<main class="recovery">
+  <div class="brand"><img src="icon.png" alt="">Explorix</div>
+  <h1 id="title">Explorix could not start</h1>
+  <p id="message"></p>
+  <p class="muted">Your projects and evidence have not been deleted. Technical details are below and in the log folder (<span id="logs"></span>).</p>
+  <pre id="detail" aria-label="Technical details"></pre>
+  <div class="actions" id="actions"></div>
+  <p class="muted" id="version"></p>
+</main>
+<script src="recovery.js"></script>
+</body>
+</html>

@@ -2,6 +2,7 @@ import { Router, type Request } from 'express';
 import type { Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { prisma } from '../db.js';
+import { evidenceInclude, serializeEvidence } from '../lib/evidence.js';
 import { badRequest, forbidden, notFound, parse } from '../lib/errors.js';
 import { audit, diff } from '../lib/audit.js';
 import { validateCustomFields } from '../lib/customFields.js';
@@ -141,7 +142,7 @@ issuesRouter.get('/:id', async (req, res) => {
     include: {
       ...listInclude,
       findings: { select: { id: true, number: true, title: true, status: true, severity: true, sessionId: true, classification: { select: { name: true, color: true } } } },
-      attachments: { orderBy: { createdAt: 'asc' }, include: { uploader: userSel } },
+      attachments: evidenceInclude,
       testResults: { take: 20, orderBy: { createdAt: 'desc' }, include: { status: true, runItem: { select: { runId: true, testCase: { select: { id: true, number: true, title: true } } } } } },
       automationResults: { take: 20, orderBy: { createdAt: 'desc' }, include: { test: { select: { id: true, name: true } }, run: { select: { id: true, number: true } } } },
     },
@@ -150,7 +151,7 @@ issuesRouter.get('/:id', async (req, res) => {
   const history = await prisma.auditEvent.findMany({ where: { entityType: 'issue', entityId: i.id }, include: { actor: userSel }, orderBy: { createdAt: 'desc' }, take: 100 });
   const integrations = await prisma.integration.findMany({ where: { projectId: i.projectId, provider: 'GITHUB', enabled: true }, select: { id: true, name: true } });
   res.json({
-    issue: { ...serialize(req, i), findings: i.findings.map((f) => ({ ...f, key: keys.finding(f.number) })) },
+    issue: { ...serialize(req, i), attachments: i.attachments.map(serializeEvidence), findings: i.findings.map((f) => ({ ...f, key: keys.finding(f.number) })) },
     history,
     pushTargets: integrations,
     permissions: { canEdit: hasRole(req, 'TESTER') },

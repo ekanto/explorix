@@ -1283,9 +1283,9 @@ function DangerTab() {
           There is no single-project export yet. Lists (sessions, findings, issues, test cases…) and reports offer CSV/JSON exports on their pages.{' '}
           {isOrgAdmin ? (
             <>
-              A complete organization backup (JSON) is available in{' '}
+              A complete organization export (JSON) is available in{' '}
               <Link to="/admin?tab=data" className="ex-link">
-                Administration → Data
+                Administration → Data export
               </Link>
               .
             </>

@@ -20,7 +20,13 @@ All settings are environment variables, validated at startup by `apps/server/src
 | `COOKIE_SECURE` | | prod: `true` | Set `false` only when serving plain HTTP for local testing. |
 | `SESSION_TTL_HOURS` | | `72` | Login session lifetime. |
 | `STORAGE_DIR` | | `./.data/uploads` | Attachment directory. Must be persistent. |
-| `MAX_UPLOAD_MB` | | `15` | Per-file limit. |
+| `MAX_UPLOAD_MB` | | `15` | Per-file limit for documents and other attachments. |
+| `MAX_IMAGE_MB`, `MAX_VIDEO_MB` | | `25`, `500` | Per-file limits for images and videos. Videos are streamed to disk. |
+| `TRASH_RETENTION_DAYS` | | `30` | Deleted evidence can be restored from the trash for this long, then it is purged. |
+| `WORK_DIR` | | `./.data/work` | Scratch space for report jobs, backups and in-flight uploads. |
+| `BACKUP_DIR` | | `<WORK_DIR>/backups` | Where full backups (database + evidence) are written. Restore needs a superuser database role. |
+| `PDF_RENDERER` | | `none` | `playwright` enables PDF reports on a server (requires `npx playwright install chromium`). The desktop app uses Electron instead. |
+| `ALLOW_SETUP_WIZARD` | | | `true` enables the first-run "create workspace" wizard. Keep it disabled on public servers and use the `BOOTSTRAP_*` variables instead. |
 | `USE_EMBEDDED_PG` | | `true` | Development only. Set `false` when using your own PostgreSQL. |
 | `AI_PROVIDER` | | `none` | `none` or `openai` (any OpenAI-compatible API). |
 | `AI_API_KEY`, `AI_BASE_URL`, `AI_MODEL` | | | Server-side only; never sent to the browser. |

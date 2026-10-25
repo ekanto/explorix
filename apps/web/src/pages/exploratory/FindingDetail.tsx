@@ -39,6 +39,7 @@ import {
   IconSparkles,
   IconTestPipe,
   IconTrash,
+  IconReportAnalytics,
 } from '@tabler/icons-react';
 import { api, p } from '../../lib/api';
 import { useAiStatus, type AiMeta } from '../../lib/ai';
@@ -170,6 +171,9 @@ function FindingView({ finding: f, history, permissions }: { finding: any; histo
         title={f.title}
         actions={
           <>
+            <Button variant="default" leftSection={<IconReportAnalytics size={16} />} component={Link} to={`/projects/${pid}/reports/new?scope=finding&id=${f.id}&kind=BUG_INVESTIGATION`}>
+              Report
+            </Button>
             {isTester && !f.issue && (
               <Button leftSection={<IconBug size={16} />} onClick={() => setConverting(true)}>
                 Convert to issue
@@ -260,6 +264,7 @@ function FindingView({ finding: f, history, permissions }: { finding: any; histo
             <Paper withBorder p="md">
               <Stack gap="md">
                 <TextBlock label="Description" value={f.description ? <span className="ex-prewrap">{f.description}</span> : null} />
+                <TextBlock label="Preconditions" value={f.preconditions ? <span className="ex-prewrap">{f.preconditions}</span> : null} />
                 <Grid gap="md">
                   <Grid.Col span={{ base: 12, sm: 6 }}>
                     <TextBlock label="Actual behavior" value={f.actual ? <span className="ex-prewrap">{f.actual}</span> : null} />
@@ -269,8 +274,17 @@ function FindingView({ finding: f, history, permissions }: { finding: any; histo
                   </Grid.Col>
                 </Grid>
                 <TextBlock label="Steps to reproduce" value={f.reproSteps ? <span className="ex-prewrap">{f.reproSteps}</span> : null} />
-                <TextBlock label="Environment" value={f.environment ? <span className="ex-prewrap">{f.environment}</span> : null} />
-                {!f.description && !f.actual && !f.expected && !f.reproSteps && !f.environment && (
+                <Grid gap="md">
+                  <Grid.Col span={{ base: 12, sm: 6 }}>
+                    <TextBlock label="Environment" value={f.environment ? <span className="ex-prewrap">{f.environment}</span> : null} />
+                  </Grid.Col>
+                  <Grid.Col span={{ base: 12, sm: 6 }}>
+                    <TextBlock label="Browser / client" value={f.browser ? <span className="ex-prewrap">{f.browser}</span> : null} />
+                  </Grid.Col>
+                </Grid>
+                <TextBlock label="Follow-up actions" value={f.followUp ? <span className="ex-prewrap">{f.followUp}</span> : null} />
+                <TextBlock label="Resolution" value={f.resolution ? <span className="ex-prewrap">{f.resolution}</span> : null} />
+                {!f.description && !f.actual && !f.expected && !f.reproSteps && !f.environment && !f.preconditions && !f.browser && (
                   <Text size="sm" c="dimmed">
                     No details recorded yet.{canEdit ? ' Use Edit to add actual/expected behavior and repro steps.' : ''}
                   </Text>
@@ -282,7 +296,7 @@ function FindingView({ finding: f, history, permissions }: { finding: any; histo
               <Title order={5} mb="sm">
                 Evidence
               </Title>
-              <Attachments targetType="finding" targetId={f.id} items={f.attachments ?? []} canUpload={isTester} onChange={refresh} />
+              <Attachments targetType="finding" targetId={f.id} items={f.attachments ?? []} canUpload={isTester} onChange={refresh} pasteToAttach={!editing && !converting} />
             </Paper>
 
             <Paper withBorder p={0}>

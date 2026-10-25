@@ -1,5 +1,12 @@
 import crypto from 'node:crypto';
 import { promisify } from 'node:util';
+import { z } from 'zod';
+
+export const passwordSchema = z
+  .string()
+  .min(10, 'Password must be at least 10 characters')
+  .max(200)
+  .refine((p) => /[a-zA-Z]/.test(p) && /[0-9]/.test(p), 'Password must contain letters and numbers');
 
 const scrypt = promisify(crypto.scrypt) as (pw: string, salt: Buffer, len: number, opts: crypto.ScryptOptions) => Promise<Buffer>;
 const PARAMS = { N: 16384, r: 8, p: 1 };

@@ -1,4 +1,4 @@
-# Explorix 1.0 — feature implementation checklist
+# Explorix 2.0 — feature implementation checklist
 
 Status legend:
 
@@ -24,10 +24,33 @@ Requirement IDs refer to [PRD.md](PRD.md). Test evidence lives in `apps/server/t
 | 9 | Dashboard metrics reflect stored records | ✅ | `reports.test.ts` (exact counts on fixture data); `quality.spec.ts` "dashboard metrics change exactly with persisted records" (API and UI cards) |
 | 10 | CSV and JSON exports contain correct data | ✅ | `quality.spec.ts` "findings CSV and JSON exports match the filtered list"; `unit.test.ts` (CSV escaping, formula-injection guard) |
 | 11 | Invalid input and unauthorized requests handled safely | ✅ | `access.test.ts` (validation 400s, role 403s), `auth.test.ts` (CSRF header, lockout, token scope), `workflow.test.ts` (unsafe upload types rejected), `charters.spec.ts` viewer 403 |
-| 12 | Core workflows have automated tests | ✅ | 51 backend tests + 21 e2e tests (see README "Test results") |
+| 12 | Core workflows have automated tests | ✅ | 74 backend tests + 21 web e2e tests + 9 desktop unit tests + 6 desktop e2e tests (see README "Test results") |
 | 13 | Another developer can install and run it | ✅ | README quick start was exercised on Windows with embedded PostgreSQL. Docker path is ❔ (see §4) |
 | 14 | Nothing presented as functional unless it is | ✅ | Jira/GitLab return 501; Slack/SSO/MFA/SCIM shown as "Planned"; AI shows setup instructions when unconfigured |
 | 15 | Unimplemented features documented honestly | ✅ | This file, [ROADMAP.md](ROADMAP.md), [RESEARCH.md](RESEARCH.md) matrix status column |
+
+## 1a. Desktop 2.0 definition of done (desktop brief §18)
+
+Desktop e2e = `apps/desktop/e2e/desktop.spec.ts`, run against the development build, `win-unpacked` and the installed app.
+
+| # | Criterion | Status | Evidence |
+|---|---|---|---|
+| 1 | Launches as a normal Windows desktop application | ✅ | Desktop e2e (window state, menu); installed via `Explorix-Setup-2.0.0.exe /S` and launched from the installed exe |
+| 2 | No separate Node.js install | ✅ | Electron runtime, server bundle, dependencies and PostgreSQL are packaged; `build.mjs` fails if a runtime import is not staged; installed-app e2e run from a folder outside the repository |
+| 3 | Existing core features keep working | ✅ | Web e2e 21/21 and server 74/74 on the same code; desktop e2e uses the sample project, findings and the workbench |
+| 4 | Projects, sessions, findings and attachments persist across restarts | ✅ | Desktop e2e "keeps projects and evidence across an app restart, outside the install folder" |
+| 5 | Screenshots and supported videos attach to findings | ✅ | Desktop e2e records a real WebM; `evidence.test.ts` covers images, video metadata, frames and markers |
+| 6 | Reports contain the selected findings and evidence | ✅ | `reporting.test.ts` "respects evidence selection and never silently drops videos"; desktop e2e parses every format |
+| 7 | DOCX is editable and correctly formatted | ✅ | mammoth parses the headings, tables, images and captions (`reporting.test.ts`, desktop e2e) |
+| 8 | Markdown links work after the package is moved | ✅ | `reporting.test.ts` moves the folder and resolves every link; desktop e2e resolves the MD and HTML links |
+| 9 | PDFs are readable, searchable and laid out | ✅ | pdf.js text extraction and page count (`reporting.test.ts`, desktop e2e) |
+| 10 | Videos represented, never silently omitted | ✅ | Thumbnail, frames and timestamp table in DOCX/PDF; link or player in MD/HTML; warning when no preview is possible ([REPORTING.md](REPORTING.md#how-video-is-represented)) |
+| 11 | Evidence packages include all selected assets and a manifest | ✅ | Desktop e2e ZIP package (original video byte-identical, no secrets or app paths); `reporting.test.ts` package test |
+| 12 | No overwrite without confirmation | ✅ | Desktop e2e (Cancel keeps the existing report, Keep both); desktop unit tests (atomic save, folder replace) |
+| 13 | Backup and restore preserve data and evidence relationships | ✅ | `backup.test.ts` (5 tests); desktop e2e backup → change → restore |
+| 14 | Installer and packaged app tested | ✅ | Silent install, shortcuts, uninstall entry, launch, clean shutdown, uninstall keeps data ([DESKTOP.md](DESKTOP.md#tests)); portable exe launched |
+| 15 | Setup, build instructions and known limitations | ✅ | [DESKTOP.md](DESKTOP.md), [REPORTING.md](REPORTING.md), README |
+| — | Code-signed installer | 📋 | No certificate available; the build is unsigned and documented as such |
 
 ## 2. Phase checklist
 
@@ -83,7 +106,7 @@ Requirement IDs refer to [PRD.md](PRD.md). Test evidence lives in `apps/server/t
 | Module | Gap | Status |
 |---|---|---|
 | Charters / templates | Templates do not store custom-field defaults; no charter or template export | 📋 |
-| Sessions | No ZIP export with attachments; TBS split is self-reported at debrief | 📋 |
+| Sessions | TBS split is self-reported at debrief (session reports and ZIP evidence packages are available since 2.0) | 🟡 |
 | Findings | No bulk actions; finding ↔ issue linking only starts from the finding side | 📋 |
 | Issues | No tags or environment field; plain-text description | 📋 |
 | AI regression cases | Generated preconditions are not passed to the create endpoint | 🟡 |
@@ -92,8 +115,8 @@ Requirement IDs refer to [PRD.md](PRD.md). Test evidence lives in `apps/server/t
 | Requirements | Coverage filter is client-side over the first 200 rows; no direct requirement ↔ session/issue link | 🟡 |
 | Automation | Sources are created automatically and cannot be edited; run detail shows at most 2,000 results; artifacts are links/metadata (binary upload goes through the attachments API) | 🟡 |
 | Activity / audit | Project feed filters only by entity type; no export of the activity log | 🟡 |
-| Reports | No status filter; no server-generated PDF (browser print → PDF) | 🟡 |
-| Admin | Only the full-organization JSON export; no import/restore tool | 🟡 |
+| Reports | Dashboard has no status filter; generated reports are English only (see [REPORTING.md](REPORTING.md#limitations)) | 🟡 |
+| Admin | Backup/restore covers the whole workspace (no per-project export); restore needs a superuser database role | 🟡 |
 | Integrations | Webhook secrets and GitHub tokens need `ENCRYPTION_KEY`; webhooks have no retry | 🟡 |
 
 ## 4. Deliverables (brief §17)
@@ -114,6 +137,8 @@ Requirement IDs refer to [PRD.md](PRD.md). Test evidence lives in `apps/server/t
 | 12 | API and integration docs | [API.md](API.md), [INTEGRATIONS.md](INTEGRATIONS.md), `/api/docs` | ✅ |
 | 13 | This checklist | — | ✅ |
 | 14 | Limitations and roadmap | [ROADMAP.md](ROADMAP.md) | ✅ |
+| 15 | Windows desktop app and installer | `apps/desktop`, `apps/desktop/release/` (git-ignored build output), [DESKTOP.md](DESKTOP.md) | ✅ (unsigned) |
+| 16 | Reporting engine docs | [REPORTING.md](REPORTING.md) | ✅ |
 
 ## 5. Unverified in this environment
 
@@ -122,3 +147,5 @@ Requirement IDs refer to [PRD.md](PRD.md). Test evidence lives in `apps/server/t
 - ❔ Live AI providers: only exercised with a mocked provider.
 - ❔ GitHub Issues push against the real GitHub API: `integrations.test.ts` covers it with a stubbed GitHub endpoint only.
 - ❔ Browsers other than Chromium; screen-reader behaviour (no automated accessibility audit was run).
+- ❔ Windows 10, ARM64 devices and machines with non-English locales: the desktop build was tested only on Windows 11 x64.
+- ❔ In-place upgrade from one installed desktop version to the next: there is only one desktop release so far. The migration safety-backup path is covered by `backup.test.ts` and the boot code, not by a real upgrade.

@@ -30,6 +30,7 @@ import { testCasesRouter } from './modules/testCases.js';
 import { testRunsRouter } from './modules/testRuns.js';
 import { automationRouter } from './modules/automation.js';
 import { reportsRouter } from './modules/reports.js';
+import { reportingRouter } from './modules/reporting.js';
 import { aiRouter, aiStatusRouter } from './modules/ai.js';
 import { integrationsRouter, tokensRouter } from './modules/integrations.js';
 
@@ -40,12 +41,21 @@ export function createApp() {
   app.disable('x-powered-by');
   app.set('trust proxy', 'loopback');
 
+  // Desktop: the API listens on loopback only; rejecting foreign Host headers blocks DNS-rebinding attacks from web pages.
+  if (config.isDesktop) {
+    app.use((req, res, next) => {
+      if (req.hostname === '127.0.0.1' || req.hostname === 'localhost') return next();
+      res.status(421).json({ error: { code: 'misdirected', message: 'Unexpected host' } });
+    });
+  }
+
   app.use(
     helmet({
       contentSecurityPolicy: {
         directives: {
           defaultSrc: ["'self'"],
           imgSrc: ["'self'", 'data:', 'blob:'],
+          mediaSrc: ["'self'", 'blob:'],
           styleSrc: ["'self'", "'unsafe-inline'"],
           scriptSrc: ["'self'"],
           connectSrc: ["'self'"],
@@ -97,6 +107,7 @@ export function createApp() {
   p.use('/', testRunsRouter);
   p.use('/automation', automationRouter);
   p.use('/reports', reportsRouter);
+  p.use('/reporting', reportingRouter);
   p.use('/ai', aiRouter);
   p.use('/integrations', integrationsRouter);
   app.use('/api/projects/:projectId', p);

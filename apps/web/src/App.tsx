@@ -40,6 +40,9 @@ const AutomationCompare = lazy(() => import('./pages/automation/AutomationCompar
 const AutomationTest = lazy(() => import('./pages/automation/AutomationTest'));
 
 const Reports = lazy(() => import('./pages/admin/Reports'));
+const ReportWizard = lazy(() => import('./pages/reports/ReportWizard'));
+const ReportProjectPicker = lazy(() => import('./pages/reports/ReportProjectPicker'));
+const DesktopSettings = lazy(() => import('./pages/DesktopSettings'));
 const Activity = lazy(() => import('./pages/admin/Activity'));
 const Integrations = lazy(() => import('./pages/admin/Integrations'));
 const ProjectSettings = lazy(() => import('./pages/admin/ProjectSettings'));
@@ -89,6 +92,9 @@ export function App() {
             <Route path="notifications" element={<Notifications />} />
             <Route path="profile" element={<Profile />} />
             <Route path="admin" element={<Admin />} />
+            <Route path="admin/backups" element={<Navigate to="/admin?tab=backups" replace />} />
+            <Route path="reports/new" element={<ReportProjectPicker />} />
+            <Route path="settings/desktop" element={<DesktopSettings />} />
             <Route path="projects/:projectId" element={<ProjectLayout />}>
               <Route index element={<ProjectDashboard />} />
               <Route path="charters" element={<Charters />} />
@@ -113,6 +119,7 @@ export function App() {
               <Route path="automation/compare" element={<AutomationCompare />} />
               <Route path="automation/tests/:testId" element={<AutomationTest />} />
               <Route path="reports" element={<Reports />} />
+              <Route path="reports/new" element={<ReportWizard />} />
               <Route path="activity" element={<Activity />} />
               <Route path="integrations" element={<Integrations />} />
               <Route path="settings" element={<ProjectSettings />} />

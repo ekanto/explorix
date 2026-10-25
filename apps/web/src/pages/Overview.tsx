@@ -1,14 +1,15 @@
 import { Link } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
-import { Badge, Box, Card, Grid, Group, Paper, SimpleGrid, Stack, Table, Text, Title } from '@mantine/core';
+import { Badge, Box, Button, Card, Grid, Group, Paper, SimpleGrid, Stack, Table, Text, Title } from '@mantine/core';
 import { IconBug, IconBulb, IconPlayerPlay, IconUserCheck } from '@tabler/icons-react';
 import { api } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { clock, fromNow, titleCase } from '../lib/format';
 import { ClassificationBadge, EmptyState, KeyLink, PageHeader, QueryState, SessionStatusBadge, SeverityBadge, StatCard, UserAvatar, UserLabel } from '../components/ui';
+import { SampleProjectButton } from './Projects';
 
 export default function Overview() {
-  const { user } = useAuth();
+  const { user, isOrgAdmin } = useAuth();
   const q = useQuery({ queryKey: ['overview'], queryFn: () => api.get('/overview'), refetchInterval: 60_000 });
   const mw = useQuery({ queryKey: ['my-work'], queryFn: () => api.get('/my-work') });
   const hour = new Date().getHours();
@@ -31,7 +32,20 @@ export default function Overview() {
                 Projects
               </Title>
               {d.projects.length === 0 ? (
-                <EmptyState title="No projects" description="You're not a member of any active project yet." />
+                <EmptyState
+                  title="No projects"
+                  description={isOrgAdmin ? 'Create a project, or load a sample project to see Explorix with realistic data.' : "You're not a member of any active project yet."}
+                  action={
+                    isOrgAdmin ? (
+                      <Group>
+                        <Button component={Link} to="/projects" variant="default">
+                          Go to projects
+                        </Button>
+                        <SampleProjectButton />
+                      </Group>
+                    ) : undefined
+                  }
+                />
               ) : (
                 <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }}>
                   {d.projects.map((p: any) => (

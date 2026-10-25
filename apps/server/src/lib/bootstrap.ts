@@ -1,8 +1,7 @@
 import { z } from 'zod';
 import { prisma } from '../db.js';
 import { logger } from '../logger.js';
-import { passwordSchema } from '../modules/auth.js';
-import { hashPassword } from './passwords.js';
+import { hashPassword, passwordSchema } from './passwords.js';
 import { SYSTEM_TEMPLATES } from './systemTemplates.js';
 
 const bootstrapSchema = z.object({
@@ -30,24 +29,31 @@ export async function bootstrapIfEmpty(env: NodeJS.ProcessEnv = process.env): Pr
     throw new Error(`Invalid bootstrap settings: ${JSON.stringify(parsed.error.flatten().fieldErrors)}`);
   }
   const { BOOTSTRAP_ADMIN_EMAIL: email, BOOTSTRAP_ADMIN_PASSWORD: password, BOOTSTRAP_ADMIN_NAME: name, BOOTSTRAP_ORG_NAME: orgName } = parsed.data;
-  const passwordHash = await hashPassword(password);
-  const slug = orgName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'org';
+  const created = await provisionOrganization({ email, password, name, orgName, source: 'org.bootstrap' });
+  if (created) logger.info({ email, org: orgName }, 'First-run bootstrap created the organization owner');
+  return !!created;
+}
 
-  const created = await prisma.$transaction(async (tx) => {
-    // Re-check inside the transaction so concurrent instances cannot both provision.
+/**
+ * Creates the first organization, its owner and the built-in charter templates
+ * in one transaction. Returns the owner, or null when an organization already
+ * exists (re-checked under an advisory lock so concurrent callers cannot both win).
+ */
+export async function provisionOrganization(p: { email: string; password: string; name: string; orgName: string; source: string }) {
+  const passwordHash = await hashPassword(p.password);
+  const slug = p.orgName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'org';
+  return prisma.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(727172)`;
-    if ((await tx.organization.count()) > 0) return false;
-    const org = await tx.organization.create({ data: { name: orgName, slug } });
-    const user = await tx.user.upsert({ where: { email }, update: {}, create: { email, name, passwordHash } });
+    if ((await tx.organization.count()) > 0) return null;
+    const org = await tx.organization.create({ data: { name: p.orgName, slug } });
+    const user = await tx.user.upsert({ where: { email: p.email }, update: {}, create: { email: p.email, name: p.name, passwordHash } });
     await tx.orgMember.create({ data: { orgId: org.id, userId: user.id, role: 'OWNER' } });
     for (const t of SYSTEM_TEMPLATES) {
       await tx.charterTemplate.create({
         data: { orgId: org.id, name: t.name, category: t.category, description: t.description, missionTemplate: t.missionTemplate, timeboxMinutes: t.timeboxMinutes, heuristics: t.heuristics, testIdeas: t.testIdeas, defaults: t.defaults, isSystem: true },
       });
     }
-    await tx.auditEvent.create({ data: { orgId: org.id, actorId: user.id, action: 'org.bootstrap', entityType: 'Organization', entityId: org.id, changes: { name: orgName, owner: email } } });
-    return true;
+    await tx.auditEvent.create({ data: { orgId: org.id, actorId: user.id, action: p.source, entityType: 'Organization', entityId: org.id, changes: { name: p.orgName, owner: p.email } } });
+    return { user, org };
   });
-  if (created) logger.info({ email, org: orgName }, 'First-run bootstrap created the organization owner');
-  return created;
 }

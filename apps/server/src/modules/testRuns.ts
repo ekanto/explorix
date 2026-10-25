@@ -241,7 +241,7 @@ testRunsRouter.get('/test-runs/:id/items/:itemId/results', async (req, res) => {
     include: { testCase: { include: { steps: { orderBy: { position: 'asc' } } } } },
   });
   if (!item) throw notFound('Run item');
-  const results = await prisma.testResult.findMany({ where: { runItemId: item.id }, orderBy: { createdAt: 'desc' }, include: { status: true, createdBy: userSel, attachments: true, issue: { select: { id: true, number: true, title: true } } } });
+  const results = await prisma.testResult.findMany({ where: { runItemId: item.id }, orderBy: { createdAt: 'desc' }, include: { status: true, createdBy: userSel, attachments: { where: { deletedAt: null } }, issue: { select: { id: true, number: true, title: true } } } });
   res.json({ item: { ...item, testCase: { ...item.testCase, key: keys.testCase(item.testCase.number) } }, results });
 });
 

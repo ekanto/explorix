@@ -2,6 +2,7 @@ import { Router, type Request } from 'express';
 import type { Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { prisma, type Tx } from '../db.js';
+import { evidenceInclude, serializeEvidence } from '../lib/evidence.js';
 import { badRequest, forbidden, notFound, parse } from '../lib/errors.js';
 import { audit, diff } from '../lib/audit.js';
 import { validateCustomFields } from '../lib/customFields.js';
@@ -33,6 +34,10 @@ const findingBody = z.object({
   expected: z.string().max(10_000).nullish(),
   actual: z.string().max(10_000).nullish(),
   environment: z.string().max(2000).nullish(),
+  browser: z.string().max(300).nullish(),
+  preconditions: z.string().max(10_000).nullish(),
+  followUp: z.string().max(10_000).nullish(),
+  resolution: z.string().max(10_000).nullish(),
   sessionId: z.string().nullish(),
   charterId: z.string().nullish(),
   ownerId: z.string().nullish(),
@@ -41,7 +46,7 @@ const findingBody = z.object({
   customFields: z.record(z.unknown()).optional(),
 });
 
-const SCALARS = ['title', 'description', 'severity', 'priority', 'status', 'reproSteps', 'expected', 'actual', 'environment', 'ownerId', 'requirementId', 'classificationId'] as const;
+const SCALARS = ['title', 'description', 'severity', 'priority', 'status', 'reproSteps', 'expected', 'actual', 'environment', 'browser', 'preconditions', 'followUp', 'resolution', 'ownerId', 'requirementId', 'classificationId'] as const;
 
 async function resolveClassification(projectId: string, body: { classificationId?: string; classificationKey?: string }) {
   if (!body.classificationId && !body.classificationKey) return undefined;
@@ -97,7 +102,7 @@ const listInclude = {
   issue: { select: { id: true, number: true, title: true, status: true, externalUrl: true } },
   requirement: { select: { id: true, number: true, title: true } },
   tags: { include: { tag: true } },
-  _count: { select: { attachments: true, comments: true } },
+  _count: { select: { attachments: { where: { deletedAt: null } }, comments: true } },
 } satisfies Prisma.FindingInclude;
 
 type ListFinding = Prisma.FindingGetPayload<{ include: typeof listInclude }>;
@@ -212,6 +217,10 @@ findingsRouter.post('/', requireRole('TESTER'), async (req, res) => {
         reproSteps: body.reproSteps ?? null,
         expected: body.expected ?? null,
         actual: body.actual ?? null,
+        browser: body.browser ?? session?.browser ?? null,
+        preconditions: body.preconditions ?? null,
+        followUp: body.followUp ?? null,
+        resolution: body.resolution ?? null,
         environment: body.environment ?? (session ? [session.browser, session.os, session.device, session.buildVersion].filter(Boolean).join(' / ') || null : null),
         authorId: req.user!.id,
         ownerId: body.ownerId ?? null,
@@ -239,7 +248,7 @@ findingsRouter.get('/:id', async (req, res) => {
     where: { id: String(req.params.id), projectId: req.project!.id },
     include: {
       ...listInclude,
-      attachments: { orderBy: { createdAt: 'asc' }, include: { uploader: userSel } },
+      attachments: evidenceInclude,
       duplicateOf: { select: { id: true, number: true, title: true } },
       duplicates: { select: { id: true, number: true, title: true } },
       testCases: { select: { id: true, number: true, title: true } },
@@ -251,6 +260,7 @@ findingsRouter.get('/:id', async (req, res) => {
   res.json({
     finding: {
       ...serialize(req, f),
+      attachments: f.attachments.map(serializeEvidence),
       duplicateOf: f.duplicateOf ? { ...f.duplicateOf, key: keys.finding(f.duplicateOf.number) } : null,
       duplicates: f.duplicates.map((d) => ({ ...d, key: keys.finding(d.number) })),
       testCases: f.testCases.map((t) => ({ ...t, key: keys.testCase(t.number) })),

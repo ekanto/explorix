@@ -11,7 +11,12 @@ dist/
 e2e/test-results/
 e2e/playwright-report/
 e2e/blob-report/
+apps/desktop/e2e/test-results/
 coverage/
+
+# Desktop build output (staged resources, installers)
+apps/desktop/build/resources/
+apps/desktop/release/
 
 # Local tooling
 .playwright-mcp/

@@ -2,6 +2,7 @@ import { Router, type Request } from 'express';
 import type { Prisma, SessionStatus } from '@prisma/client';
 import { z } from 'zod';
 import { prisma } from '../db.js';
+import { evidenceInclude, serializeEvidence } from '../lib/evidence.js';
 import { AppError, badRequest, conflict, forbidden, notFound, parse } from '../lib/errors.js';
 import { audit, diff } from '../lib/audit.js';
 import { validateCustomFields } from '../lib/customFields.js';
@@ -188,7 +189,7 @@ sessionsRouter.get('/:id', async (req, res) => {
         include: {
           author: userSel,
           finding: { select: { id: true, number: true, title: true, severity: true, status: true, classification: true } },
-          attachment: { select: { id: true, fileName: true, mimeType: true, size: true } },
+          attachment: { select: { id: true, fileName: true, mimeType: true, size: true, deletedAt: true } },
         },
       },
       findings: {
@@ -197,10 +198,10 @@ sessionsRouter.get('/:id', async (req, res) => {
           classification: true,
           author: userSel,
           issue: { select: { id: true, number: true, title: true, status: true } },
-          _count: { select: { attachments: true, comments: true } },
+          _count: { select: { attachments: { where: { deletedAt: null } }, comments: true } },
         },
       },
-      attachments: { orderBy: { createdAt: 'asc' }, include: { uploader: userSel } },
+      attachments: evidenceInclude,
       relatedFrom: { include: { to: { select: { id: true, number: true, title: true, status: true } } } },
       relatedTo: { include: { from: { select: { id: true, number: true, title: true, status: true } } } },
     },
@@ -215,6 +216,7 @@ sessionsRouter.get('/:id', async (req, res) => {
       key: keys.session(s.number),
       charter: { ...s.charter, key: keys.charter(s.charter.number), tags: tagNames(s.charter.tags) },
       tags: tagNames(s.tags),
+      attachments: s.attachments.map(serializeEvidence),
       liveElapsedSeconds: liveElapsed(s, now),
       findings: s.findings.map((f) => ({ ...f, key: keys.finding(f.number), issue: f.issue ? { ...f.issue, key: keys.issue(pk, f.issue.number) } : null })),
       logEntries: s.logEntries.map((l) => ({ ...l, finding: l.finding ? { ...l.finding, key: keys.finding(l.finding.number) } : null })),

@@ -35,7 +35,7 @@ export function SeverityBadge({ value, ...rest }: { value: string | null | undef
   return <EnumBadge value={value} meta={SEVERITY} variant="filled" {...rest} />;
 }
 
-export function ClassificationBadge({ c, ...rest }: { c: { name: string; color: string; isDefect?: boolean } | null | undefined } & BadgeProps) {
+export function ClassificationBadge({ c, ...rest }: { c: { name: string; color: string; isDefect?: boolean } | null | undefined } & Omit<BadgeProps, 'c'>) {
   if (!c) return null;
   return (
     <Badge color={c.color} variant={c.isDefect ? 'filled' : 'light'} {...rest}>

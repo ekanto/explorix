@@ -2,6 +2,7 @@ import { Router, type Request } from 'express';
 import type { AutomationRun, Prisma, StatusCategory, TestResultStatus } from '@prisma/client';
 import { z } from 'zod';
 import { prisma, type Tx } from '../db.js';
+import { removeFiles } from '../lib/evidence.js';
 import { AppError, badRequest, notFound, parse } from '../lib/errors.js';
 import { audit } from '../lib/audit.js';
 import { keys, nextNumber, paging, toArray } from '../lib/util.js';
@@ -284,7 +285,7 @@ automationRouter.get('/runs/:id', async (req, res) => {
     },
     orderBy: [{ category: 'asc' }, { createdAt: 'asc' }],
     take: Math.min(Number(q.limit) || 2000, 5000),
-    include: { test: true, status: true, issue: { select: { id: true, number: true, title: true, status: true } }, attachments: true },
+    include: { test: true, status: true, issue: { select: { id: true, number: true, title: true, status: true } }, attachments: { where: { deletedAt: null } } },
   });
   // Flaky indicator per test from its recent history (last 10 completed results across runs).
   const testIds = results.map((r) => r.testId);
@@ -315,10 +316,13 @@ automationRouter.get('/runs/:id', async (req, res) => {
 automationRouter.delete('/runs/:id', requireRole('LEAD'), async (req, res) => {
   const run = await prisma.automationRun.findFirst({ where: { id: String(req.params.id), projectId: req.project!.id } });
   if (!run) throw notFound('Automation run');
+  // Attachment rows cascade with the run; collect their files first so none are orphaned on disk.
+  const files = await prisma.attachment.findMany({ where: { automationResult: { runId: run.id } }, select: { storageKey: true } });
   await prisma.$transaction(async (tx) => {
     await tx.automationRun.delete({ where: { id: run.id } });
     await audit(tx, req, { projectId: run.projectId, entityType: 'automation_run', entityId: run.id, action: 'deleted', changes: { key: keys.automationRun(run.number), name: run.name } });
   });
+  await removeFiles(files.map((f) => f.storageKey));
   res.json({ ok: true });
 });
 

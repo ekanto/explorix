@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Badge, Box, Button, Card, ColorInput, Group, Modal, SimpleGrid, Stack, Switch, Text, TextInput, Textarea } from '@mantine/core';
-import { IconPlus } from '@tabler/icons-react';
+import { IconPlus, IconSparkles } from '@tabler/icons-react';
 import { api } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { ROLE_LABEL } from '../lib/constants';
@@ -65,6 +65,26 @@ function NewProjectModal({ opened, onClose }: { opened: boolean; onClose: () => 
   );
 }
 
+/** Creates a fully populated demo project so a fresh workspace can be explored immediately. */
+export function SampleProjectButton({ variant = 'light' }: { variant?: 'light' | 'default' | 'filled' }) {
+  const qc = useQueryClient();
+  const navigate = useNavigate();
+  const m = useMutation({
+    mutationFn: () => api.post<{ project: { id: string; name: string } }>('/admin/sample-project'),
+    onSuccess: (d) => {
+      qc.invalidateQueries({ queryKey: ['projects'] });
+      toastOk(`Sample project “${d.project.name}” created`);
+      navigate(`/projects/${d.project.id}`);
+    },
+    onError: (e) => toastError(e, 'Could not create the sample project'),
+  });
+  return (
+    <Button variant={variant} leftSection={<IconSparkles size={16} />} loading={m.isPending} onClick={() => m.mutate()}>
+      Load sample project
+    </Button>
+  );
+}
+
 export default function Projects() {
   const { isOrgAdmin } = useAuth();
   const [includeArchived, setIncludeArchived] = useState(false);
@@ -92,7 +112,22 @@ export default function Projects() {
       <QueryState query={q}>
         {(d) =>
           d.projects.length === 0 ? (
-            <EmptyState title="No projects yet" description="Ask an organization admin to add you to a project." />
+            isOrgAdmin ? (
+              <EmptyState
+                title="No projects yet"
+                description="Create your first project, or load a sample project with charters, sessions, findings and evidence to explore Explorix."
+                action={
+                  <Group>
+                    <Button leftSection={<IconPlus size={16} />} onClick={() => setOpen(true)}>
+                      New project
+                    </Button>
+                    <SampleProjectButton variant="default" />
+                  </Group>
+                }
+              />
+            ) : (
+              <EmptyState title="No projects yet" description="Ask an organization admin to add you to a project." />
+            )
           ) : (
             <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }}>
               {d.projects.map((pr) => (

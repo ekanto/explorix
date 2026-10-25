@@ -504,7 +504,7 @@ async function main() {
           const key = newStorageKey();
           await storage.put(key, data);
           const att = await prisma.attachment.create({
-            data: { projectId: shop.id, uploaderId: s.tester, fileName: `screenshot-F-${fNumber}.png`, storageKey: key, mimeType: 'image/png', size: data.length, sha256: crypto.createHash('sha256').update(data).digest('hex'), sessionId: session.id, findingId: finding.id, createdAt: wall },
+            data: { projectId: shop.id, uploaderId: s.tester, fileName: `screenshot-F-${fNumber}.png`, storageKey: key, mimeType: 'image/png', kind: 'IMAGE', width: 480, height: 300, size: data.length, sha256: crypto.createHash('sha256').update(data).digest('hex'), sessionId: session.id, findingId: finding.id, createdAt: wall },
           });
           await log('ATTACHMENT', `screenshot-F-${fNumber}.png`, e.at * 60, wall, { attachmentId: att.id });
         }

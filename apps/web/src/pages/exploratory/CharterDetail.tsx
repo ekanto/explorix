@@ -15,6 +15,7 @@ import {
   IconMessage,
   IconPencilMinus,
   IconPlayerPlay,
+  IconReportAnalytics,
   IconTimeline,
 } from '@tabler/icons-react';
 import { api, p } from '../../lib/api';
@@ -136,6 +137,9 @@ function CharterView({ charter: c, permissions }: { charter: any; permissions: {
                 Launch session
               </Button>
             )}
+            <Button variant="default" leftSection={<IconReportAnalytics size={16} />} component={Link} to={`/projects/${pid}/reports/new?scope=charter&id=${c.id}&kind=SESSION`}>
+              Report
+            </Button>
             {permissions.canEdit && !archived && (
               <Button variant="default" leftSection={<IconEdit size={16} />} component={Link} to={`/projects/${pid}/charters/${c.id}/edit`}>
                 Edit

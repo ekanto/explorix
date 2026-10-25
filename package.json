@@ -1,10 +1,11 @@
 {
   "name": "explorix",
   "private": true,
-  "version": "1.0.0",
+  "version": "2.0.0",
   "workspaces": [
     "apps/server",
     "apps/web",
+    "apps/desktop",
     "e2e"
   ],
   "scripts": {
@@ -14,10 +15,13 @@
     "db:reset": "npm run db:reset -w @explorix/server",
     "build": "npm run build -w @explorix/web && npm run build -w @explorix/server",
     "start": "npm run start -w @explorix/server",
-    "typecheck": "npm run typecheck -w @explorix/server && npm run typecheck -w @explorix/web",
+    "typecheck": "npm run typecheck -w @explorix/server && npm run typecheck -w @explorix/web && npm run typecheck -w @explorix/desktop",
     "test": "npm test -w @explorix/server",
     "test:e2e": "npm test -w e2e",
-    "test:all": "npm test && npm run test:e2e"
+    "test:all": "npm test && npm run test:e2e",
+    "test:desktop": "npm test -w @explorix/desktop && npm run test:e2e -w @explorix/desktop",
+    "desktop": "npm start -w @explorix/desktop",
+    "dist:win": "npm run dist -w @explorix/desktop"
   },
   "allowScripts": {
     "@embedded-postgres/windows-x64@18.4.0-beta.17": true,
@@ -25,6 +29,7 @@
     "@prisma/engines@6.19.3": true,
     "prisma@6.19.3": true,
     "esbuild@0.28.2": true,
-    "@scarf/scarf": false
+    "@scarf/scarf": false,
+    "electron@45.0.0": true
   }
 }

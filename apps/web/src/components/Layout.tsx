@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, Outlet, useLocation, useMatch, useNavigate } from 'react-router';
+import { Link, Outlet, useLocation, useMatch, useNavigate, useSearchParams } from 'react-router';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import {
   ActionIcon,
@@ -12,11 +12,13 @@ import {
   Indicator,
   Kbd,
   Menu,
+  Modal,
   NavLink,
   Popover,
   ScrollArea,
   Select,
   Stack,
+  Table,
   Text,
   Tooltip,
   UnstyledButton,
@@ -53,9 +55,13 @@ import {
   IconUserCheck,
   IconListCheck,
   IconBulb,
+  IconDeviceDesktop,
+  IconKeyboard,
+  IconReportAnalytics,
 } from '@tabler/icons-react';
 import { api } from '../lib/api';
 import { useAuth } from '../lib/auth';
+import { desktop, isDesktop } from '../lib/desktop';
 import { fromNow } from '../lib/format';
 import { Logo } from './Logo';
 import { UserAvatar } from './ui';
@@ -199,8 +205,10 @@ function GlobalSearch({ projectId }: { projectId?: string }) {
             { id: 'nav-sessions', label: 'Sessions', description: 'Exploratory session repository', leftSection: <IconPlayerPlay size={18} />, onClick: () => navigate(`${base}/sessions`) },
             { id: 'nav-findings', label: 'Findings', description: 'Observations, risks and defects', leftSection: <IconBulb size={18} />, onClick: () => navigate(`${base}/findings`) },
             { id: 'nav-reports', label: 'Reports', description: 'Dashboards and release readiness', leftSection: <IconChartBar size={18} />, onClick: () => navigate(`${base}/reports`) },
+            { id: 'nav-new-report', label: 'New report', description: 'Build a PDF, Word, Markdown or HTML report with evidence', leftSection: <IconReportAnalytics size={18} />, onClick: () => navigate(`${base}/reports/new`) },
           ]
         : []),
+      ...(isDesktop ? [{ id: 'nav-desktop-settings', label: 'Desktop settings', description: 'Storage folders, size limits, startup', leftSection: <IconDeviceDesktop size={18} />, onClick: () => navigate('/settings/desktop') }] : []),
     ];
   }, [q.data, query, navigate, projectId]);
 
@@ -220,12 +228,48 @@ function GlobalSearch({ projectId }: { projectId?: string }) {
   );
 }
 
+const SHORTCUTS: [string, string][] = [
+  ['Ctrl + K  or  /', 'Search and jump to anything'],
+  ['Ctrl + J', 'Switch light / dark theme'],
+  ['G then M', 'Go to My Work'],
+  ...(isDesktop
+    ? ([
+        ['Ctrl + Shift + R', 'New report'],
+        ['Ctrl + ,', 'Desktop settings'],
+        ['Ctrl + 0 / + / −', 'Reset / increase / decrease zoom'],
+      ] as [string, string][])
+    : []),
+  ['?', 'In a session workbench: its own shortcuts (capture finding, notes, timer…)'],
+];
+
+function ShortcutsHelp({ opened, onClose }: { opened: boolean; onClose: () => void }) {
+  return (
+    <Modal opened={opened} onClose={onClose} title="Keyboard shortcuts" centered>
+      <Table>
+        <Table.Tbody>
+          {SHORTCUTS.map(([k, d]) => (
+            <Table.Tr key={k}>
+              <Table.Td w={170}>
+                <Kbd>{k}</Kbd>
+              </Table.Td>
+              <Table.Td>{d}</Table.Td>
+            </Table.Tr>
+          ))}
+        </Table.Tbody>
+      </Table>
+    </Modal>
+  );
+}
+
 export function AppLayout() {
   const { user, org, logout, isOrgAdmin } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [sp, setSp] = useSearchParams();
   const match = useMatch('/projects/:projectId/*');
+  const inWorkbench = !!useMatch('/projects/:projectId/sessions/:id');
   const [opened, { toggle, close }] = useDisclosure();
+  const [helpOpen, setHelpOpen] = useState(false);
   const { setColorScheme } = useMantineColorScheme();
   const scheme = useComputedColorScheme('light');
   const projects = useProjects();
@@ -241,6 +285,17 @@ export function AppLayout() {
 
   useEffect(() => close(), [location.pathname, close]);
 
+  // Desktop menu commands (File › New Report, Settings, Help › Keyboard Shortcuts…).
+  useEffect(() => desktop?.onNavigate((to) => navigate(to)), [navigate]);
+  useEffect(() => {
+    if (sp.get('shortcuts') === '1') {
+      setHelpOpen(true);
+      const rest = new URLSearchParams(sp);
+      rest.delete('shortcuts');
+      setSp(rest, { replace: true });
+    }
+  }, [sp, setSp]);
+
   const list = projects.data?.projects ?? [];
   const pid = urlPid ?? (list.some((x) => x.id === lastPid) ? lastPid : list.find((x) => !x.archivedAt)?.id) ?? undefined;
   const current = list.find((x) => x.id === pid);
@@ -248,6 +303,7 @@ export function AppLayout() {
   useHotkeys([
     ['mod+J', () => setColorScheme(scheme === 'dark' ? 'light' : 'dark')],
     ['g m', () => navigate('/my-work')],
+    ['shift+/', () => !inWorkbench && setHelpOpen(true)],
   ]);
 
   const path = location.pathname;
@@ -320,6 +376,14 @@ export function AppLayout() {
                     Administration
                   </Menu.Item>
                 )}
+                {isDesktop && (
+                  <Menu.Item leftSection={<IconDeviceDesktop size={16} />} component={Link} to="/settings/desktop">
+                    Desktop settings
+                  </Menu.Item>
+                )}
+                <Menu.Item leftSection={<IconKeyboard size={16} />} onClick={() => setHelpOpen(true)}>
+                  Keyboard shortcuts
+                </Menu.Item>
                 <Menu.Item component="a" href="/api/docs" target="_blank" leftSection={<IconFileDescription size={16} />}>
                   API documentation
                 </Menu.Item>
@@ -382,17 +446,19 @@ export function AppLayout() {
               {item(`${base}/automation`, 'Automation', <IconRobot size={18} />)}
               {item(`${base}/issues`, 'Issues', <IconBug size={18} />)}
               {item(`${base}/requirements`, 'Requirements', <IconFlask size={18} />)}
-              {item(`${base}/reports`, 'Reports', <IconChartBar size={18} />)}
+              {item(`${base}/reports`, 'Reports', <IconChartBar size={18} />, true)}
+              {item(`${base}/reports/new`, 'Report builder', <IconReportAnalytics size={18} />)}
               {item(`${base}/activity`, 'Activity', <IconTimeline size={18} />)}
               {item(`${base}/integrations`, 'Integrations', <IconPlugConnected size={18} />)}
               {item(`${base}/settings`, 'Project settings', <IconAdjustments size={18} />)}
             </Stack>
           )}
         </AppShell.Section>
-        {isOrgAdmin && (
+        {(isOrgAdmin || isDesktop) && (
           <AppShell.Section>
             <Divider my="xs" />
-            {item('/admin', 'Administration', <IconSettings size={18} />)}
+            {isOrgAdmin && item('/admin', 'Administration', <IconSettings size={18} />)}
+            {isDesktop && item('/settings/desktop', 'Desktop settings', <IconDeviceDesktop size={18} />)}
           </AppShell.Section>
         )}
       </AppShell.Navbar>
@@ -403,6 +469,7 @@ export function AppLayout() {
         </Box>
       </AppShell.Main>
       <GlobalSearch projectId={pid} />
+      <ShortcutsHelp opened={helpOpen} onClose={() => setHelpOpen(false)} />
     </AppShell>
   );
 }

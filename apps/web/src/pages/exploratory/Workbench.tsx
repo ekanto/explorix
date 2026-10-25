@@ -62,6 +62,7 @@ import {
   IconPlayerPlay,
   IconPlayerStop,
   IconPrinter,
+  IconReportAnalytics,
   IconSend,
   IconSparkles,
   IconTarget,
@@ -74,7 +75,8 @@ import { useAuth } from '../../lib/auth';
 import { options, PRIORITY } from '../../lib/constants';
 import { clock, duration, fmtDate, fmtDateTime, fromNow } from '../../lib/format';
 import { useProject } from '../../lib/project';
-import { Attachments, contentUrl, uploadAttachment } from '../../components/Attachments';
+import { Attachments, contentUrl, nameClipboardFile, uploadAttachment } from '../../components/Attachments';
+import { isDesktop } from '../../lib/desktop';
 import { Comments } from '../../components/Comments';
 import { CustomFieldsInput, CustomFieldsView } from '../../components/CustomFields';
 import { FindingFormModal } from '../../components/FindingForm';
@@ -322,7 +324,7 @@ function WorkbenchView({ data, refresh, refetch }: { data: any; refresh: () => v
       if (!files.length) return;
       e.preventDefault();
       for (const f of files) {
-        const file = f.name === 'image.png' ? new File([f], `screenshot-${new Date().toISOString().replace(/[:.]/g, '-')}.png`, { type: f.type }) : f;
+        const file = nameClipboardFile(f);
         try {
           await uploadAttachment(pid, 'session', s.id, file);
           toastOk(`${file.name} attached to ${s.key}`);
@@ -413,8 +415,11 @@ function WorkbenchView({ data, refresh, refetch }: { data: any; refresh: () => v
                 <Menu.Item leftSection={<IconEdit size={14} />} disabled={!perms.canOperate || !!s.archivedAt} onClick={() => setDetailsOpen(true)}>
                   Edit session details
                 </Menu.Item>
+                <Menu.Item leftSection={<IconReportAnalytics size={14} />} onClick={() => navigate(`/projects/${pid}/reports/new?scope=session&id=${s.id}&kind=SESSION`)}>
+                  Build report (PDF, Word, Markdown, HTML)…
+                </Menu.Item>
                 <Menu.Item leftSection={<IconDownload size={14} />} onClick={() => download(p(pid, `/sessions/${s.id}/report`), `${s.key}.md`).catch((e) => toastError(e))}>
-                  Download report (Markdown)
+                  Quick summary (Markdown, no evidence)
                 </Menu.Item>
                 <Menu.Item leftSection={<IconDownload size={14} />} onClick={() => download(p(pid, `/sessions/${s.id}/report?format=json`), `${s.key}.json`).catch((e) => toastError(e))}>
                   Download report (JSON)
@@ -626,7 +631,7 @@ function WorkbenchView({ data, refresh, refetch }: { data: any; refresh: () => v
                   </Tabs.Panel>
                   <Tabs.Panel value="evidence">
                     <Text size="xs" c="dimmed" mb="sm">
-                      Drop files here or paste a screenshot anywhere on this page (Ctrl+V). Images, video, PDF, logs, HAR and JSON up to 15 MB.
+                      Drop files here, paste a screenshot anywhere on this page (Ctrl+V){isDesktop ? ' or capture the screen' : ''}. Evidence numbering (E1, E2…) follows the order used in reports — drag to reorder.
                     </Text>
                     <Attachments targetType="session" targetId={s.id} items={s.attachments} canUpload={perms.canEdit} onChange={refetch} />
                   </Tabs.Panel>

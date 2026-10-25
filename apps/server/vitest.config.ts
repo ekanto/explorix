@@ -9,6 +9,12 @@ export default defineConfig({
       NODE_ENV: 'test',
       DATABASE_URL: testDatabaseUrl(),
       STORAGE_DIR: './.data/test-uploads',
+      WORK_DIR: './.data/test-work',
+      // Small limits so size-limit tests stay fast.
+      MAX_UPLOAD_MB: '3',
+      MAX_IMAGE_MB: '1',
+      MAX_VIDEO_MB: '2',
+      PDF_RENDERER: 'playwright',
       AI_PROVIDER: 'none',
       LOG_LEVEL: 'silent',
       APP_URL: 'http://localhost:5173',

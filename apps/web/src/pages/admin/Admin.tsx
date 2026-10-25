@@ -64,6 +64,8 @@ import { AiSetupNotice } from '../../components/AiNotice';
 import { AuditFeed, AUDIT_ENTITY_TYPES } from '../../components/AuditLog';
 import { CopyCode } from '../../components/CopyCode';
 import { useProjects } from '../../components/Layout';
+import { isDesktop } from '../../lib/desktop';
+import { BackupsTab } from './BackupsTab';
 
 type OrgRole = 'OWNER' | 'ADMIN' | 'MEMBER';
 type AdminUser = {
@@ -94,7 +96,8 @@ const TABS = [
   { value: 'auth', label: 'Authentication' },
   { value: 'ai', label: 'AI assistant' },
   { value: 'audit', label: 'Audit log' },
-  { value: 'data', label: 'Data & backup' },
+  { value: 'backups', label: 'Backups' },
+  { value: 'data', label: 'Data export' },
 ];
 
 const useAdminUsers = (enabled = true) => useQuery({ queryKey: ['admin-users'], queryFn: () => api.get<{ users: AdminUser[] }>('/admin/users'), enabled });
@@ -163,6 +166,9 @@ export default function Admin() {
         </Tabs.Panel>
         <Tabs.Panel value="audit">
           <AuditTab />
+        </Tabs.Panel>
+        <Tabs.Panel value="backups">
+          <BackupsTab />
         </Tabs.Panel>
         <Tabs.Panel value="data">
           <DataTab />
@@ -1151,7 +1157,7 @@ function AuditTab() {
         }
       </QueryState>
       <Text size="xs" c="dimmed">
-        Audit events can't be edited or deleted from the UI. There is no separate audit export endpoint yet — the organization export on the Data & backup tab includes the records.
+        Audit events can't be edited or deleted from the UI. There is no separate audit export endpoint yet — the organization export on the Data export tab includes the records.
       </Text>
     </Stack>
   );
@@ -1187,7 +1193,11 @@ function DataTab() {
                 issues, requirements, test cases, runs and automation results. Attachments are listed as metadata only — the files themselves are not included.
               </Text>
               <Text size="xs" c="dimmed" mt={4}>
-                Use it for archiving, analysis or migration. There is no import/restore from this file in the UI; for disaster recovery use database backups below.
+                Use it for archiving, analysis or migration. There is no import/restore from this file; for recovery use the{' '}
+                <Anchor component={Link} to="/admin?tab=backups" size="xs">
+                  Backups
+                </Anchor>{' '}
+                tab{isDesktop ? '' : ' or the database backups below'}.
               </Text>
             </div>
           </Group>
@@ -1197,6 +1207,7 @@ function DataTab() {
         </Group>
       </Paper>
 
+      {!isDesktop && (
       <Paper withBorder p="md">
         <Group gap="xs" mb="xs">
           <IconDatabase size={20} />
@@ -1233,9 +1244,11 @@ function DataTab() {
           />
         </Stack>
         <Text size="xs" c="dimmed" mt="sm">
-          Managed PostgreSQL services (RDS, Cloud SQL, Azure Database…) offer automated snapshots and point-in-time recovery — prefer those where available.
+          Managed PostgreSQL services (RDS, Cloud SQL, Azure Database…) offer automated snapshots and point-in-time recovery — prefer those where available. Single-organization installations can also use the
+          built-in Backups tab, which bundles the database and evidence files in one restorable ZIP.
         </Text>
       </Paper>
+      )}
     </Stack>
   );
 }

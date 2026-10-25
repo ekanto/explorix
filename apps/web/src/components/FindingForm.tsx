@@ -42,6 +42,10 @@ export type FindingValues = {
   expected: string;
   actual: string;
   environment: string;
+  browser: string;
+  preconditions: string;
+  followUp: string;
+  resolution: string;
   ownerId: string | null;
   requirementId: string | null;
   tags: string[];
@@ -58,6 +62,10 @@ const blank = (classificationId: string): FindingValues => ({
   expected: '',
   actual: '',
   environment: '',
+  browser: '',
+  preconditions: '',
+  followUp: '',
+  resolution: '',
   ownerId: null,
   requirementId: null,
   tags: [],
@@ -119,6 +127,10 @@ export function FindingFormModal({
         expected: finding.expected ?? '',
         actual: finding.actual ?? '',
         environment: finding.environment ?? '',
+        browser: finding.browser ?? '',
+        preconditions: finding.preconditions ?? '',
+        followUp: finding.followUp ?? '',
+        resolution: finding.resolution ?? '',
         ownerId: finding.ownerId ?? finding.owner?.id ?? null,
         requirementId: finding.requirementId ?? finding.requirement?.id ?? null,
         tags: finding.tags ?? [],
@@ -219,6 +231,10 @@ export function FindingFormModal({
       expected: v.expected || null,
       actual: v.actual || null,
       environment: v.environment || (editing ? null : undefined),
+      browser: v.browser || (editing ? null : undefined),
+      preconditions: v.preconditions || null,
+      followUp: v.followUp || null,
+      resolution: v.resolution || null,
       ownerId: v.ownerId,
       requirementId: v.requirementId,
       tags: v.tags,
@@ -365,11 +381,12 @@ export function FindingFormModal({
         />
 
         <Anchor component="button" type="button" size="sm" onClick={() => setMore((m) => !m)} ta="left">
-          {more ? 'Hide' : 'Show'} details (description, owner, requirement, tags, environment, custom fields)
+          {more ? 'Hide' : 'Show'} details (description, preconditions, environment, owner, follow-up, tags, custom fields)
         </Anchor>
         <Collapse expanded={more}>
           <Stack gap="sm">
             <Textarea label="Description / context" autosize minRows={2} maxRows={10} value={v.description} onChange={(e) => set('description', e.currentTarget.value)} />
+            <Textarea label="Preconditions" placeholder="State or data required before reproducing" autosize minRows={1} maxRows={6} value={v.preconditions} onChange={(e) => set('preconditions', e.currentTarget.value)} error={errors.preconditions} />
             <SimpleGrid cols={{ base: 1, sm: 2 }}>
               <Select label="Owner" data={memberOptions} value={v.ownerId} onChange={(x) => set('ownerId', x)} clearable searchable />
               <Select
@@ -382,12 +399,19 @@ export function FindingFormModal({
                 nothingFoundMessage={reqs.isLoading ? 'Loading…' : 'No requirements'}
               />
             </SimpleGrid>
-            <TextInput
-              label="Environment"
-              placeholder={sessionId ? 'Defaults to the session environment' : 'Browser / OS / build'}
-              value={v.environment}
-              onChange={(e) => set('environment', e.currentTarget.value)}
-            />
+            <SimpleGrid cols={{ base: 1, sm: 2 }}>
+              <TextInput
+                label="Environment"
+                placeholder={sessionId ? 'Defaults to the session environment' : 'OS / build / device'}
+                value={v.environment}
+                onChange={(e) => set('environment', e.currentTarget.value)}
+              />
+              <TextInput label="Browser / client" placeholder={sessionId ? 'Defaults to the session browser' : 'e.g. Edge 141'} value={v.browser} onChange={(e) => set('browser', e.currentTarget.value)} maxLength={300} />
+            </SimpleGrid>
+            <SimpleGrid cols={{ base: 1, sm: 2 }}>
+              <Textarea label="Follow-up actions" autosize minRows={1} maxRows={6} value={v.followUp} onChange={(e) => set('followUp', e.currentTarget.value)} />
+              <Textarea label="Resolution" placeholder="How it was resolved, or why no action is needed" autosize minRows={1} maxRows={6} value={v.resolution} onChange={(e) => set('resolution', e.currentTarget.value)} />
+            </SimpleGrid>
             <TagsInput label="Tags" data={tagNames} value={v.tags} onChange={(x) => set('tags', x)} clearable />
             <CustomFieldsInput entity="FINDING" value={v.customFields} onChange={(x) => set('customFields', x)} />
           </Stack>
