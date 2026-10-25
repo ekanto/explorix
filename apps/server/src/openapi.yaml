@@ -1,0 +1,698 @@
+openapi: 3.0.3
+info:
+  title: Explorix API
+  version: 1.0.0
+  description: |
+    REST API for Explorix, the exploratory testing and QA management platform.
+
+    **Authentication**
+    - Browser: `POST /api/auth/login` sets an httpOnly `explorix_sid` cookie. Cookie-authenticated
+      state-changing requests must send the header `X-Requested-With: explorix` (CSRF protection).
+    - Scripts / CI: create a personal API token (`POST /api/tokens` from the UI: *Profile → API tokens*) and send
+      `Authorization: Bearer <token>`. Tokens can optionally be restricted to one project and act with the
+      permissions of the user who created them. Bearer requests do not need the CSRF header.
+
+    **Errors** use the shape `{ "error": { "code": "validation_error", "message": "...", "details": {...} } }`.
+    Resources outside your projects return **404** (existence is not disclosed). Insufficient role returns **403**.
+
+    **Project roles**: VIEWER < TESTER < LEAD < ADMIN (organization owners/admins are implicit project admins).
+    The minimum role for each operation is noted in its summary.
+
+    **Display keys**: charters `CH-n`, sessions `S-n`, findings `F-n`, issues `<PROJECTKEY>-n`, test cases `C-n`,
+    requirements `REQ-n`, test runs `R-n`, automation runs `A-n`. API paths use internal ids.
+servers:
+  - url: /
+security:
+  - cookieAuth: []
+  - bearerAuth: []
+tags:
+  - name: Auth
+  - name: Projects
+  - name: Charters
+  - name: Sessions
+    description: Exploratory session workbench (timer, notes, log, findings, review)
+  - name: Findings
+  - name: Issues
+  - name: Requirements
+  - name: Test cases
+  - name: Test runs
+  - name: Automation
+    description: CI ingestion (native JSON, JUnit XML, Playwright JSON), history, flaky detection
+  - name: Reports
+  - name: Collaboration
+  - name: AI
+  - name: Integrations
+  - name: Admin
+
+components:
+  securitySchemes:
+    cookieAuth: { type: apiKey, in: cookie, name: explorix_sid }
+    bearerAuth: { type: http, scheme: bearer }
+  parameters:
+    projectId: { name: projectId, in: path, required: true, schema: { type: string } }
+    id: { name: id, in: path, required: true, schema: { type: string } }
+    format: { name: format, in: query, schema: { type: string, enum: [csv, json] } }
+  responses:
+    Error:
+      description: Error
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code: { type: string, example: validation_error }
+            message: { type: string }
+            details: { type: object }
+    Severity: { type: string, enum: [TRIVIAL, MINOR, MAJOR, CRITICAL, BLOCKER] }
+    Priority: { type: string, enum: [LOW, MEDIUM, HIGH, CRITICAL] }
+    SessionStatus: { type: string, enum: [DRAFT, IN_PROGRESS, PAUSED, COMPLETED, IN_REVIEW, CHANGES_REQUESTED, APPROVED, ABANDONED] }
+    CharterInput:
+      type: object
+      required: [title, mission]
+      properties:
+        title: { type: string, maxLength: 200 }
+        mission: { type: string, description: 'Natural language. Suggested form: "Explore <target> using <approach> to discover <risks>".' }
+        target: { type: string, description: Feature or application under test }
+        scope: { type: string }
+        outOfScope: { type: string }
+        objectives: { type: string }
+        learningGoals: { type: string }
+        risks: { type: string }
+        assumptions: { type: string }
+        testIdeas: { type: array, items: { type: string } }
+        heuristics: { type: array, items: { type: string } }
+        prerequisites: { type: string }
+        testData: { type: string }
+        environmentId: { type: string, nullable: true }
+        browser: { type: string }
+        os: { type: string }
+        device: { type: string }
+        estimatedMinutes: { type: integer }
+        timeboxMinutes: { type: integer, default: 60 }
+        priority: { $ref: '#/components/schemas/Priority' }
+        riskLevel: { $ref: '#/components/schemas/Priority' }
+        exitCriteria: { type: string }
+        status: { type: string, enum: [DRAFT, READY] }
+        milestoneId: { type: string, nullable: true }
+        templateId: { type: string, nullable: true }
+        assigneeIds: { type: array, items: { type: string } }
+        tags: { type: array, items: { type: string } }
+        requirementIds: { type: array, items: { type: string } }
+        customFields: { type: object, additionalProperties: true }
+    FindingInput:
+      type: object
+      required: [title, classificationId]
+      properties:
+        sessionId: { type: string, description: 'Session the finding was discovered in (recommended). Must be editable by the caller.' }
+        charterId: { type: string }
+        classificationId: { type: string, description: 'Project classification (observation, potential_defect, confirmed_defect, question, risk, follow_up, testing_note, …)' }
+        title: { type: string }
+        description: { type: string }
+        severity: { $ref: '#/components/schemas/Severity' }
+        priority: { $ref: '#/components/schemas/Priority' }
+        reproSteps: { type: string }
+        expected: { type: string }
+        actual: { type: string }
+        environment: { type: string }
+        ownerId: { type: string, nullable: true }
+        requirementId: { type: string, nullable: true }
+        tags: { type: array, items: { type: string } }
+        customFields: { type: object, additionalProperties: true }
+    AutomationResult:
+      type: object
+      required: [name, status]
+      properties:
+        key: { type: string, description: 'Stable identity for history/flakiness. Defaults to "<file>::<suite>::<name>".' }
+        name: { type: string }
+        suite: { type: string }
+        file: { type: string }
+        status:
+          type: string
+          description: Matched against project result status keys and aliases (e.g. passed/pass/ok, failed/failure, skipped/pending, flaky). Unknown values map to "error".
+          example: passed
+        durationMs: { type: integer }
+        message: { type: string }
+        stackTrace: { type: string }
+        retries: { type: integer, description: 'Retries before the final status; a pass after retries is flagged flaky.' }
+        artifacts:
+          type: array
+          items:
+            type: object
+            properties:
+              name: { type: string }
+              url: { type: string, format: uri }
+              path: { type: string }
+              contentType: { type: string }
+    AutomationRunMeta:
+      type: object
+      properties:
+        name: { type: string }
+        source: { type: string, description: 'Logical source (e.g. "web-e2e"). Created automatically.' }
+        framework: { type: string, example: playwright }
+        branch: { type: string }
+        commitSha: { type: string }
+        buildNumber: { type: string }
+        ciProvider: { type: string, example: github-actions }
+        ciUrl: { type: string, format: uri }
+        environment: { type: string }
+        milestoneId: { type: string }
+        milestone: { type: string, description: Milestone name (alternative to milestoneId) }
+        startedAt: { type: string, format: date-time }
+        completedAt: { type: string, format: date-time }
+        metadata: { type: object, additionalProperties: true }
+    AutomationRunSummary:
+      type: object
+      properties:
+        id: { type: string }
+        key: { type: string, example: A-12 }
+        status: { type: string, enum: [RUNNING, COMPLETED] }
+        totalCount: { type: integer }
+        passedCount: { type: integer }
+        failedCount: { type: integer }
+        skippedCount: { type: integer }
+        passRate: { type: number, nullable: true }
+        url: { type: string }
+
+paths:
+  /api/health:
+    get:
+      tags: [Auth]
+      summary: Liveness check (public)
+      security: []
+      responses: { '200': { description: OK } }
+
+  /api/auth/login:
+    post:
+      tags: [Auth]
+      summary: Sign in (sets session cookie). Rate limited; accounts lock temporarily after repeated failures.
+      security: []
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, required: [email, password], properties: { email: { type: string }, password: { type: string } } }
+      responses:
+        '200': { description: Signed in }
+        '401': { $ref: '#/components/responses/Error' }
+  /api/auth/logout:
+    post: { tags: [Auth], summary: Sign out, responses: { '204': { description: Signed out } } }
+  /api/auth/me:
+    get: { tags: [Auth], summary: Current user, organization role and preferences, responses: { '200': { description: OK } } }
+    patch: { tags: [Auth], summary: Update own name, avatar color, preferences (theme, email notifications), responses: { '200': { description: OK } } }
+  /api/auth/me/password:
+    post: { tags: [Auth], summary: Change own password (revokes other sessions), responses: { '204': { description: Changed } } }
+
+  /api/tokens:
+    get: { tags: [Auth], summary: List own API tokens (secrets are never returned again), responses: { '200': { description: OK } } }
+    post:
+      tags: [Auth]
+      summary: Create an API token (interactive session only). The secret is returned once.
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, required: [name], properties: { name: { type: string }, projectId: { type: string, nullable: true }, expiresInDays: { type: integer } } }
+      responses: { '201': { description: Created; response contains `secret` } }
+  /api/tokens/{id}:
+    delete: { tags: [Auth], summary: Revoke a token, parameters: [{ $ref: '#/components/parameters/id' }], responses: { '204': { description: Revoked } } }
+
+  /api/users:
+    get: { tags: [Collaboration], summary: Active organization users (optional ?projectId= restricts to members), responses: { '200': { description: OK } } }
+  /api/my-work:
+    get: { tags: [Collaboration], summary: 'Assigned charters, active/draft sessions, reviews, owned findings, assigned issues and test-run items, upcoming and overdue work', responses: { '200': { description: OK } } }
+  /api/notifications:
+    get: { tags: [Collaboration], summary: 'In-app notifications (?unread=true, page, pageSize)', responses: { '200': { description: OK } } }
+  /api/notifications/read:
+    post: { tags: [Collaboration], summary: 'Mark notifications read ({ids:[...]} or {all:true})', responses: { '200': { description: OK } } }
+  /api/search:
+    get: { tags: [Collaboration], summary: 'Global search across accessible projects (?q=, optional projectId). Matches titles and keys like S-12.', responses: { '200': { description: OK } } }
+  /api/overview:
+    get: { tags: [Reports], summary: Cross-project overview, responses: { '200': { description: OK } } }
+
+  /api/projects:
+    get: { tags: [Projects], summary: Projects the caller can access, responses: { '200': { description: OK } } }
+    post: { tags: [Projects], summary: Create a project (org admins; creator becomes project admin). Seeds default classifications, statuses and folder., responses: { '201': { description: Created } } }
+  /api/projects/{projectId}:
+    parameters: [{ $ref: '#/components/parameters/projectId' }]
+    get: { tags: [Projects], summary: 'Project with members, milestones, environments, tags, custom fields, classifications, statuses, your role', responses: { '200': { description: OK } } }
+    patch: { tags: [Projects], summary: '[ADMIN] Update name, description, color and settings (requireReview, allowSelfReview, lockCompletedSessions, defaultTimeboxMinutes, allowTesterCharterEdit)', responses: { '200': { description: OK } } }
+  /api/projects/{projectId}/archive:
+    parameters: [{ $ref: '#/components/parameters/projectId' }]
+    post: { tags: [Projects], summary: '[ADMIN] Archive (read-only)', responses: { '200': { description: OK } } }
+  /api/projects/{projectId}/unarchive:
+    parameters: [{ $ref: '#/components/parameters/projectId' }]
+    post: { tags: [Projects], summary: '[ADMIN] Unarchive', responses: { '200': { description: OK } } }
+  /api/projects/{projectId}/activity:
+    parameters: [{ $ref: '#/components/parameters/projectId' }]
+    get: { tags: [Projects], summary: Project audit/activity history, responses: { '200': { description: OK } } }
+  /api/projects/{projectId}/members:
+    parameters: [{ $ref: '#/components/parameters/projectId' }]
+    post: { tags: [Projects], summary: '[ADMIN] Add member {userId, role}', responses: { '201': { description: Added } } }
+  /api/projects/{projectId}/members/{memberId}:
+    parameters: [{ $ref: '#/components/parameters/projectId' }, { name: memberId, in: path, required: true, schema: { type: string } }]
+    patch: { tags: [Projects], summary: '[ADMIN] Change role (the last admin cannot be demoted)', responses: { '200': { description: OK } } }
+    delete: { tags: [Projects], summary: '[ADMIN] Remove member', responses: { '204': { description: Removed } } }
+  /api/projects/{projectId}/{collection}:
+    parameters:
+      - { $ref: '#/components/parameters/projectId' }
+      - { name: collection, in: path, required: true, schema: { type: string, enum: [milestones, environments, tags, custom-fields, classifications, statuses] } }
+    post: { tags: [Projects], summary: 'Create a configuration item (milestones/environments: LEAD; tags: LEAD; custom fields, classifications, statuses: ADMIN)', responses: { '201': { description: Created } } }
+  /api/projects/{projectId}/{collection}/{itemId}:
+    parameters:
+      - { $ref: '#/components/parameters/projectId' }
+      - { name: collection, in: path, required: true, schema: { type: string } }
+      - { name: itemId, in: path, required: true, schema: { type: string } }
+    patch: { tags: [Projects], summary: Update a configuration item, responses: { '200': { description: OK } } }
+    delete: { tags: [Projects], summary: Delete (or archive when in use) a configuration item, responses: { '204': { description: Deleted } } }
+
+  /api/projects/{projectId}/templates:
+    parameters: [{ $ref: '#/components/parameters/projectId' }]
+    get: { tags: [Charters], summary: Charter templates (system, organization and project), responses: { '200': { description: OK } } }
+    post: { tags: [Charters], summary: '[LEAD] Create template', responses: { '201': { description: Created } } }
+  /api/projects/{projectId}/templates/{id}:
+    parameters: [{ $ref: '#/components/parameters/projectId' }, { $ref: '#/components/parameters/id' }]
+    get: { tags: [Charters], summary: Template, responses: { '200': { description: OK } } }
+    patch: { tags: [Charters], summary: '[LEAD] Edit template', responses: { '200': { description: OK } } }
+
+  /api/projects/{projectId}/charters:
+    parameters: [{ $ref: '#/components/parameters/projectId' }]
+    get:
+      tags: [Charters]
+      summary: List charters
+      parameters:
+        - { name: q, in: query, schema: { type: string } }
+        - { name: status, in: query, schema: { type: string, enum: [DRAFT, READY, ARCHIVED, active] } }
+        - { name: priority, in: query, schema: { type: string } }
+        - { name: riskLevel, in: query, schema: { type: string } }
+        - { name: milestoneId, in: query, schema: { type: string } }
+        - { name: assigneeId, in: query, schema: { type: string, description: user id or "me" } }
+        - { name: tag, in: query, schema: { type: string } }
+      responses: { '200': { description: OK } }
+    post:
+      tags: [Charters]
+      summary: '[TESTER] Create charter'
+      requestBody: { content: { application/json: { schema: { $ref: '#/components/schemas/CharterInput' } } } }
+      responses: { '201': { description: Created }, '400': { $ref: '#/components/responses/Error' } }
+  /api/projects/{projectId}/charters/{id}:
+    parameters: [{ $ref: '#/components/parameters/projectId' }, { $ref: '#/components/parameters/id' }]
+    get: { tags: [Charters], summary: Charter with sessions, requirements and permissions, responses: { '200': { description: OK }, '404': { $ref: '#/components/responses/Error' } } }
+    patch: { tags: [Charters], summary: '[TESTER/LEAD] Edit charter (audited)', requestBody: { content: { application/json: { schema: { $ref: '#/components/schemas/CharterInput' } } } }, responses: { '200': { description: OK } } }
+  /api/projects/{projectId}/charters/{id}/history:
+    parameters: [{ $ref: '#/components/parameters/projectId' }, { $ref: '#/components/parameters/id' }]
+    get: { tags: [Charters], summary: Creation and modification history, responses: { '200': { description: OK } } }
+  /api/projects/{projectId}/charters/{id}/duplicate:
+    parameters: [{ $ref: '#/components/parameters/projectId' }, { $ref: '#/components/parameters/id' }]
+    post: { tags: [Charters], summary: '[TESTER] Duplicate as a new draft', responses: { '201': { description: Created } } }
+  /api/projects/{projectId}/charters/{id}/archive:
+    parameters: [{ $ref: '#/components/parameters/projectId' }, { $ref: '#/components/parameters/id' }]
+    post: { tags: [Charters], summary: '[TESTER] Archive', responses: { '200': { description: OK } } }
+  /api/projects/{projectId}/charters/{id}/unarchive:
+    parameters: [{ $ref: '#/components/parameters/projectId' }, { $ref: '#/components/parameters/id' }]
+    post: { tags: [Charters], summary: '[TESTER] Unarchive', responses: { '200': { description: OK } } }
+  /api/projects/{projectId}/charters/{id}/sessions:
+    parameters: [{ $ref: '#/components/parameters/projectId' }, { $ref: '#/components/parameters/id' }]
+    post:
+      tags: [Charters]
+      summary: '[TESTER] Launch a session from the charter. Each session keeps its own history and findings.'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string }
+                testerId: { type: string, nullable: true }
+                start: { type: boolean, description: Start the timer immediately }
+                timeboxMinutes: { type: integer }
+                milestoneId: { type: string }
+                environmentId: { type: string }
+                browser: { type: string }
+                os: { type: string }
+                device: { type: string }
+                buildVersion: { type: string }
+                dueDate: { type: string, format: date-time }
+      responses: { '201': { description: Created } }
+
+  /api/projects/{projectId}/sessions:
+    parameters: [{ $ref: '#/components/parameters/projectId' }]
+    get:
+      tags: [Sessions]
+      summary: Session repository
+      parameters:
+        - { name: view, in: query, schema: { type: string, enum: [all, active, completed, draft, assigned, review, abandoned, archived] } }
+        - { name: testerId, in: query, schema: { type: string, description: 'user id, "me" or "none"' } }
+        - { name: charterId, in: query, schema: { type: string } }
+        - { name: milestoneId, in: query, schema: { type: string } }
+        - { name: priority, in: query, schema: { type: string } }
+        - { name: status, in: query, schema: { type: string } }
+        - { name: tag, in: query, schema: { type: string } }
+        - { name: from, in: query, schema: { type: string, format: date } }
+        - { name: to, in: query, schema: { type: string, format: date } }
+        - { name: q, in: query, schema: { type: string } }
+      responses: { '200': { description: OK } }
+    post: { tags: [Sessions], summary: '[TESTER] Create session ({charterId, ...launch options})', responses: { '201': { description: Created } } }
+  /api/projects/{projectId}/sessions/bulk:
+    parameters: [{ $ref: '#/components/parameters/projectId' }]
+    post:
+      tags: [Sessions]
+      summary: '[LEAD] Bulk assign / tag / untag / archive / unarchive / set milestone'
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, required: [ids, action], properties: { ids: { type: array, items: { type: string } }, action: { type: string, enum: [assign, tag, untag, archive, unarchive, milestone] }, testerId: { type: string, nullable: true }, tags: { type: array, items: { type: string } }, milestoneId: { type: string, nullable: true } } }
+      responses: { '200': { description: OK } }
+  /api/projects/{projectId}/sessions/{id}:
+    parameters: [{ $ref: '#/components/parameters/projectId' }, { $ref: '#/components/parameters/id' }]
+    get: { tags: [Sessions], summary: 'Session with charter, live elapsed time, chronological log, findings, attachments, related sessions and permissions', responses: { '200': { description: OK } } }
+    patch: { tags: [Sessions], summary: '[TESTER] Edit metadata (title, tester, environment, timebox, summary, TBS breakdown, tags, custom fields)', responses: { '200': { description: OK } } }
+  /api/projects/{projectId}/sessions/{id}/notes:
+    parameters: [{ $ref: '#/components/parameters/projectId' }, { $ref: '#/components/parameters/id' }]
+    put:
+      tags: [Sessions]
+      summary: 'Autosave rich-text notes with optimistic concurrency (409 with the server copy when baseVersion is stale, unless force=true)'
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, required: [notes], properties: { notes: { type: string, description: Sanitized HTML }, baseVersion: { type: integer }, force: { type: boolean } } }
+      responses: { '200': { description: Saved }, '409': { $ref: '#/components/responses/Error' } }
+  /api/projects/{projectId}/sessions/{id}/log:
+    parameters: [{ $ref: '#/components/parameters/projectId' }, { $ref: '#/components/parameters/id' }]
+    post: { tags: [Sessions], summary: 'Add a timestamped note to the chronological log ({content})', responses: { '201': { description: Created } } }
+  /api/projects/{projectId}/sessions/{id}/{transition}:
+    parameters:
+      - { $ref: '#/components/parameters/projectId' }
+      - { $ref: '#/components/parameters/id' }
+      - { name: transition, in: path, required: true, schema: { type: string, enum: [start, pause, resume, finish, abandon, submit-review, approve, request-changes, reopen, archive, unarchive, duplicate] } }
+    post:
+      tags: [Sessions]
+      summary: 'Workflow transition. finish accepts {summary, setupPercent, testPercent, bugPercent, charterVsOpportunity}; when the project requires review, finish moves to IN_REVIEW. approve/request-changes [LEAD] accept {comment}.'
+      responses: { '200': { description: OK }, '409': { description: Invalid transition for current status } }
+  /api/projects/{projectId}/sessions/{id}/relations:
+    parameters: [{ $ref: '#/components/parameters/projectId' }, { $ref: '#/components/parameters/id' }]
+    post: { tags: [Sessions], summary: 'Link a related session ({relatedId, kind})', responses: { '201': { description: Linked } } }
+  /api/projects/{projectId}/sessions/{id}/report:
+    parameters: [{ $ref: '#/components/parameters/projectId' }, { $ref: '#/components/parameters/id' }, { $ref: '#/components/parameters/format' }]
+    get: { tags: [Sessions], summary: 'Session report as Markdown (default) or JSON (?format=json)', responses: { '200': { description: OK } } }
+
+  /api/projects/{projectId}/findings:
+    parameters: [{ $ref: '#/components/parameters/projectId' }]
+    get:
+      tags: [Findings]
+      summary: Findings repository
+      parameters:
+        - { name: open, in: query, schema: { type: boolean, description: New or Triaged only } }
+        - { name: defects, in: query, schema: { type: boolean, description: Classifications marked as defect } }
+        - { name: classification, in: query, schema: { type: string, description: 'Classification key(s), comma separated' } }
+        - { name: severity, in: query, schema: { type: string } }
+        - { name: status, in: query, schema: { type: string } }
+        - { name: sessionId, in: query, schema: { type: string } }
+        - { name: charterId, in: query, schema: { type: string } }
+        - { name: q, in: query, schema: { type: string } }
+      responses: { '200': { description: OK } }
+    post:
+      tags: [Findings]
+      summary: '[TESTER] Record a finding (logged in the session timeline with elapsed time)'
+      requestBody: { content: { application/json: { schema: { $ref: '#/components/schemas/FindingInput' } } } }
+      responses: { '201': { description: Created } }
+  /api/projects/{projectId}/findings/export:
+    parameters: [{ $ref: '#/components/parameters/projectId' }, { $ref: '#/components/parameters/format' }]
+    get: { tags: [Findings], summary: Export filtered findings as CSV or JSON, responses: { '200': { description: OK } } }
+  /api/projects/{projectId}/findings/similar:
+    parameters: [{ $ref: '#/components/parameters/projectId' }]
+    post: { tags: [Findings], summary: 'Duplicate suggestions for a draft {title, description} (suggestions only; nothing is merged automatically)', responses: { '200': { description: OK } } }
+  /api/projects/{projectId}/findings/{id}:
+    parameters: [{ $ref: '#/components/parameters/projectId' }, { $ref: '#/components/parameters/id' }]
+    get: { tags: [Findings], summary: Finding with evidence, history and links, responses: { '200': { description: OK } } }
+    patch: { tags: [Findings], summary: '[TESTER] Edit / triage (status, owner, classification, ...)', responses: { '200': { description: OK } } }
+  /api/projects/{projectId}/findings/{id}/convert-to-issue:
+    parameters: [{ $ref: '#/components/parameters/projectId' }, { $ref: '#/components/parameters/id' }]
+    post: { tags: [Findings], summary: '[TESTER] Create an internal issue from the finding (original finding and session history preserved)', responses: { '201': { description: Created } } }
+  /api/projects/{projectId}/findings/{id}/link-issue:
+    parameters: [{ $ref: '#/components/parameters/projectId' }, { $ref: '#/components/parameters/id' }]
+    post: { tags: [Findings], summary: '[TESTER] Link to an existing issue ({issueId|null})', responses: { '200': { description: OK } } }
+  /api/projects/{projectId}/findings/{id}/mark-duplicate:
+    parameters: [{ $ref: '#/components/parameters/projectId' }, { $ref: '#/components/parameters/id' }]
+    post: { tags: [Findings], summary: '[TESTER] Explicitly mark as duplicate of another finding ({duplicateOfId})', responses: { '200': { description: OK } } }
+  /api/projects/{projectId}/findings/{id}/create-test-case:
+    parameters: [{ $ref: '#/components/parameters/projectId' }, { $ref: '#/components/parameters/id' }]
+    post: { tags: [Findings], summary: '[TESTER] Turn a validated finding into a regression test case', responses: { '201': { description: Created } } }
+
+  /api/projects/{projectId}/issues:
+    parameters: [{ $ref: '#/components/parameters/projectId' }]
+    get: { tags: [Issues], summary: 'Internal issue tracker (?open=true, status, severity, priority, assigneeId, milestoneId, q)', responses: { '200': { description: OK } } }
+    post: { tags: [Issues], summary: '[TESTER] Create issue', responses: { '201': { description: Created } } }
+  /api/projects/{projectId}/issues/export:
+    parameters: [{ $ref: '#/components/parameters/projectId' }, { $ref: '#/components/parameters/format' }]
+    get: { tags: [Issues], summary: Export issues, responses: { '200': { description: OK } } }
+  /api/projects/{projectId}/issues/{id}:
+    parameters: [{ $ref: '#/components/parameters/projectId' }, { $ref: '#/components/parameters/id' }]
+    get: { tags: [Issues], summary: Issue with linked findings and history, responses: { '200': { description: OK } } }
+    patch: { tags: [Issues], summary: '[TESTER] Update (resolving an issue resolves its linked open findings)', responses: { '200': { description: OK } } }
+
+  /api/projects/{projectId}/requirements:
+    parameters: [{ $ref: '#/components/parameters/projectId' }]
+    get: { tags: [Requirements], summary: 'Requirements with coverage status (passing/failing/partial/untested); ?format=csv', responses: { '200': { description: OK } } }
+    post: { tags: [Requirements], summary: '[TESTER] Create requirement', responses: { '201': { description: Created } } }
+  /api/projects/{projectId}/requirements/import:
+    parameters: [{ $ref: '#/components/parameters/projectId' }]
+    post: { tags: [Requirements], summary: '[LEAD] Import CSV (columns Key, Title, Description, Priority, Status, URL)', requestBody: { content: { text/csv: { schema: { type: string } } } }, responses: { '200': { description: OK } } }
+  /api/projects/{projectId}/requirements/{id}:
+    parameters: [{ $ref: '#/components/parameters/projectId' }, { $ref: '#/components/parameters/id' }]
+    get: { tags: [Requirements], summary: Requirement with traceability, responses: { '200': { description: OK } } }
+    patch: { tags: [Requirements], summary: '[TESTER] Edit, link charterIds/testCaseIds', responses: { '200': { description: OK } } }
+    delete: { tags: [Requirements], summary: '[LEAD] Delete', responses: { '204': { description: Deleted } } }
+
+  /api/projects/{projectId}/test-folders:
+    parameters: [{ $ref: '#/components/parameters/projectId' }]
+    get: { tags: [Test cases], summary: Folder tree, responses: { '200': { description: OK } } }
+    post: { tags: [Test cases], summary: '[TESTER] Create folder', responses: { '201': { description: Created } } }
+  /api/projects/{projectId}/test-cases:
+    parameters: [{ $ref: '#/components/parameters/projectId' }]
+    get: { tags: [Test cases], summary: 'Test case repository (?folderId, q, priority, tag, status, archived)', responses: { '200': { description: OK } } }
+    post: { tags: [Test cases], summary: '[TESTER] Create test case (STEPS or GHERKIN format)', responses: { '201': { description: Created } } }
+  /api/projects/{projectId}/test-cases/export:
+    parameters: [{ $ref: '#/components/parameters/projectId' }, { $ref: '#/components/parameters/format' }]
+    get: { tags: [Test cases], summary: 'Export as CSV (re-importable) or JSON', responses: { '200': { description: OK } } }
+  /api/projects/{projectId}/test-cases/import:
+    parameters: [{ $ref: '#/components/parameters/projectId' }]
+    post:
+      tags: [Test cases]
+      summary: '[TESTER] Import CSV. Columns: Title*, Folder (a/b/c), Priority, Type, Preconditions, Steps, Expected (newline-paired), Gherkin, Tags (comma), Estimate (min)'
+      requestBody: { content: { text/csv: { schema: { type: string } } } }
+      responses: { '200': { description: 'Import summary with per-row errors' } }
+  /api/projects/{projectId}/test-cases/{id}:
+    parameters: [{ $ref: '#/components/parameters/projectId' }, { $ref: '#/components/parameters/id' }]
+    get: { tags: [Test cases], summary: Test case with steps and recent results, responses: { '200': { description: OK } } }
+    patch: { tags: [Test cases], summary: '[TESTER] Edit (versioned; baseVersion conflict check)', responses: { '200': { description: OK } } }
+  /api/projects/{projectId}/test-cases/{id}/revisions:
+    parameters: [{ $ref: '#/components/parameters/projectId' }, { $ref: '#/components/parameters/id' }]
+    get: { tags: [Test cases], summary: Version history snapshots, responses: { '200': { description: OK } } }
+
+  /api/projects/{projectId}/test-plans:
+    parameters: [{ $ref: '#/components/parameters/projectId' }]
+    get: { tags: [Test runs], summary: Test plans with run progress, responses: { '200': { description: OK } } }
+    post: { tags: [Test runs], summary: '[LEAD] Create plan', responses: { '201': { description: Created } } }
+  /api/projects/{projectId}/test-runs:
+    parameters: [{ $ref: '#/components/parameters/projectId' }]
+    get: { tags: [Test runs], summary: Test runs with progress, responses: { '200': { description: OK } } }
+    post: { tags: [Test runs], summary: '[TESTER] Create run from {testCaseIds | folderIds | includeAllActive}', responses: { '201': { description: Created } } }
+  /api/projects/{projectId}/test-runs/{id}:
+    parameters: [{ $ref: '#/components/parameters/projectId' }, { $ref: '#/components/parameters/id' }]
+    get: { tags: [Test runs], summary: Run with items and latest results, responses: { '200': { description: OK } } }
+  /api/projects/{projectId}/test-runs/{id}/items/{itemId}/results:
+    parameters: [{ $ref: '#/components/parameters/projectId' }, { $ref: '#/components/parameters/id' }, { name: itemId, in: path, required: true, schema: { type: string } }]
+    get: { tags: [Test runs], summary: Result history for the item, responses: { '200': { description: OK } } }
+    post:
+      tags: [Test runs]
+      summary: '[TESTER] Record a result (Pass/Fail/Blocked/Skipped/Retest or a custom status); optionally link or create an issue'
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, properties: { statusKey: { type: string, example: failed }, statusId: { type: string }, comment: { type: string }, elapsedSeconds: { type: integer }, issueId: { type: string }, createIssue: { type: object, properties: { title: { type: string }, severity: { $ref: '#/components/schemas/Severity' } } } } }
+      responses: { '201': { description: Recorded } }
+  /api/projects/{projectId}/test-runs/{id}/close:
+    parameters: [{ $ref: '#/components/parameters/projectId' }, { $ref: '#/components/parameters/id' }]
+    post: { tags: [Test runs], summary: '[TESTER] Close run (read-only afterwards)', responses: { '200': { description: OK } } }
+  /api/projects/{projectId}/test-runs/{id}/export:
+    parameters: [{ $ref: '#/components/parameters/projectId' }, { $ref: '#/components/parameters/id' }, { $ref: '#/components/parameters/format' }]
+    get: { tags: [Test runs], summary: Export run results, responses: { '200': { description: OK } } }
+
+  /api/projects/{projectId}/automation/runs:
+    parameters: [{ $ref: '#/components/parameters/projectId' }]
+    get:
+      tags: [Automation]
+      summary: 'Automation run history (?framework, branch, environment, sourceId, milestoneId, status) with facets'
+      responses: { '200': { description: OK } }
+    post:
+      tags: [Automation]
+      summary: '[TESTER] Submit a run in Explorix native JSON. Use status=RUNNING to create a staged run, then append results and complete it.'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              allOf:
+                - { $ref: '#/components/schemas/AutomationRunMeta' }
+                - type: object
+                  properties:
+                    status: { type: string, enum: [RUNNING, COMPLETED], default: COMPLETED }
+                    results: { type: array, maxItems: 20000, items: { $ref: '#/components/schemas/AutomationResult' } }
+      responses:
+        '201': { description: Created, content: { application/json: { schema: { type: object, properties: { run: { $ref: '#/components/schemas/AutomationRunSummary' } } } } } }
+        '400': { $ref: '#/components/responses/Error' }
+  /api/projects/{projectId}/automation/runs/{id}/results:
+    parameters: [{ $ref: '#/components/parameters/projectId' }, { $ref: '#/components/parameters/id' }]
+    post:
+      tags: [Automation]
+      summary: '[TESTER] Append results to a RUNNING run (e.g. one call per shard)'
+      requestBody: { content: { application/json: { schema: { type: object, required: [results], properties: { results: { type: array, items: { $ref: '#/components/schemas/AutomationResult' } } } } } } }
+      responses: { '200': { description: OK } }
+  /api/projects/{projectId}/automation/runs/{id}/complete:
+    parameters: [{ $ref: '#/components/parameters/projectId' }, { $ref: '#/components/parameters/id' }]
+    post: { tags: [Automation], summary: '[TESTER] Mark a staged run complete (fires automation_run.completed webhook)', responses: { '200': { description: OK } } }
+  /api/projects/{projectId}/automation/import/junit:
+    parameters:
+      - { $ref: '#/components/parameters/projectId' }
+      - { name: name, in: query, schema: { type: string } }
+      - { name: source, in: query, schema: { type: string } }
+      - { name: framework, in: query, schema: { type: string } }
+      - { name: branch, in: query, schema: { type: string } }
+      - { name: commitSha, in: query, schema: { type: string } }
+      - { name: buildNumber, in: query, schema: { type: string } }
+      - { name: ciProvider, in: query, schema: { type: string } }
+      - { name: ciUrl, in: query, schema: { type: string } }
+      - { name: environment, in: query, schema: { type: string } }
+      - { name: milestone, in: query, schema: { type: string } }
+    post:
+      tags: [Automation]
+      summary: '[TESTER] Import a JUnit XML report (Jest, pytest, Maven/Gradle, Cypress, Selenium, ...). Metadata via query string.'
+      requestBody: { content: { application/xml: { schema: { type: string } } } }
+      responses: { '201': { description: Created }, '400': { $ref: '#/components/responses/Error' } }
+  /api/projects/{projectId}/automation/import/playwright:
+    parameters: [{ $ref: '#/components/parameters/projectId' }]
+    post:
+      tags: [Automation]
+      summary: '[TESTER] Import Playwright JSON reporter output (reporter: json). Same query metadata as JUnit. Retries are used for flaky detection.'
+      requestBody: { content: { application/json: { schema: { type: object } } } }
+      responses: { '201': { description: Created } }
+  /api/projects/{projectId}/automation/runs/{id}:
+    parameters: [{ $ref: '#/components/parameters/projectId' }, { $ref: '#/components/parameters/id' }]
+    get: { tags: [Automation], summary: 'Run detail with results, per-test flakiness and previous comparable run', responses: { '200': { description: OK } } }
+    delete: { tags: [Automation], summary: '[LEAD] Delete run', responses: { '204': { description: Deleted } } }
+  /api/projects/{projectId}/automation/compare:
+    parameters: [{ $ref: '#/components/parameters/projectId' }, { name: base, in: query, required: true, schema: { type: string } }, { name: head, in: query, required: true, schema: { type: string } }]
+    get: { tags: [Automation], summary: 'Compare two runs: new failures, fixed, still failing, added, removed', responses: { '200': { description: OK } } }
+  /api/projects/{projectId}/automation/tests:
+    parameters: [{ $ref: '#/components/parameters/projectId' }, { name: flaky, in: query, schema: { type: boolean } }]
+    get: { tags: [Automation], summary: 'Test catalog with history-based flakiness (flaky = passed on retry, or ≥2 pass/fail flips in recent history)', responses: { '200': { description: OK } } }
+  /api/projects/{projectId}/automation/trends:
+    parameters: [{ $ref: '#/components/parameters/projectId' }, { name: days, in: query, schema: { type: integer, default: 30 } }]
+    get: { tags: [Automation], summary: Daily pass/fail trend, responses: { '200': { description: OK } } }
+
+  /api/projects/{projectId}/reports/dashboard:
+    parameters:
+      - { $ref: '#/components/parameters/projectId' }
+      - { name: milestoneId, in: query, schema: { type: string } }
+      - { name: testerId, in: query, schema: { type: string } }
+      - { name: from, in: query, schema: { type: string, format: date } }
+      - { name: to, in: query, schema: { type: string, format: date } }
+    get: { tags: [Reports], summary: 'Dashboard metrics computed from stored records; response includes `definitions` for every KPI', responses: { '200': { description: OK } } }
+  /api/projects/{projectId}/reports/readiness:
+    parameters: [{ $ref: '#/components/parameters/projectId' }, { name: milestoneId, in: query, schema: { type: string } }]
+    get: { tags: [Reports], summary: Release readiness indicators per open milestone with explicit thresholds, responses: { '200': { description: OK } } }
+  /api/projects/{projectId}/reports/coverage-gaps:
+    parameters: [{ $ref: '#/components/parameters/projectId' }]
+    get: { tags: [Reports], summary: 'Unexplored and stale charters, uncovered requirements, never-executed test cases, effort per feature', responses: { '200': { description: OK } } }
+  /api/projects/{projectId}/reports/export/{dataset}:
+    parameters:
+      - { $ref: '#/components/parameters/projectId' }
+      - { name: dataset, in: path, required: true, schema: { type: string, enum: [sessions, charters, effort-by-tester, kpis] } }
+      - { $ref: '#/components/parameters/format' }
+    get: { tags: [Reports], summary: CSV/JSON export, responses: { '200': { description: OK } } }
+
+  /api/projects/{projectId}/comments:
+    parameters: [{ $ref: '#/components/parameters/projectId' }]
+    get: { tags: [Collaboration], summary: 'Comments for ?targetType=charter|session|finding|issue|testCase&targetId=', responses: { '200': { description: OK } } }
+    post: { tags: [Collaboration], summary: '[VIEWER] Comment with optional mentions (user ids) — mentioned users are notified', responses: { '201': { description: Created } } }
+  /api/projects/{projectId}/attachments:
+    parameters: [{ $ref: '#/components/parameters/projectId' }]
+    post:
+      tags: [Collaboration]
+      summary: '[TESTER] Upload evidence (multipart field "file", plus targetType and targetId). Allowed: PNG, JPEG, GIF, WebP, PDF, MP4, WebM, ZIP, and UTF-8 text (.txt .log .md .json .har .csv .xml). Content is sniffed; SVG/HTML rejected.'
+      requestBody:
+        content:
+          multipart/form-data:
+            schema: { type: object, required: [file, targetType, targetId], properties: { file: { type: string, format: binary }, targetType: { type: string, enum: [session, finding, issue, testResult, automationResult] }, targetId: { type: string } } }
+      responses: { '201': { description: Uploaded }, '413': { description: Too large }, '415': { description: Unsupported type } }
+  /api/projects/{projectId}/attachments/{id}/content:
+    parameters: [{ $ref: '#/components/parameters/projectId' }, { $ref: '#/components/parameters/id' }]
+    get: { tags: [Collaboration], summary: 'Download (authorization enforced; images inline, others as attachment)', responses: { '200': { description: File } } }
+
+  /api/ai/status:
+    get: { tags: [AI], summary: 'AI provider status and setup instructions (AI is optional)', responses: { '200': { description: OK } } }
+  /api/ai/heuristics:
+    get: { tags: [AI], summary: Heuristics catalog (no AI required), responses: { '200': { description: OK } } }
+  /api/projects/{projectId}/ai/charter-lint:
+    parameters: [{ $ref: '#/components/parameters/projectId' }]
+    post: { tags: [AI], summary: 'Deterministic charter quality check: ambiguous objectives, missing scope (no AI required)', responses: { '200': { description: OK } } }
+  /api/projects/{projectId}/ai/heuristics/recommend:
+    parameters: [{ $ref: '#/components/parameters/projectId' }]
+    post: { tags: [AI], summary: 'Recommend heuristics for {text} (deterministic)', responses: { '200': { description: OK } } }
+  /api/projects/{projectId}/ai/charter-draft:
+    parameters: [{ $ref: '#/components/parameters/projectId' }]
+    post: { tags: [AI], summary: '[TESTER] Draft a charter from a user story ({text}). Returns an editable draft; nothing is saved.', responses: { '200': { description: OK }, '503': { description: AI not configured } } }
+  /api/projects/{projectId}/ai/test-ideas:
+    parameters: [{ $ref: '#/components/parameters/projectId' }]
+    post: { tags: [AI], summary: '[TESTER] Suggest test ideas for {charterId} or {text}', responses: { '200': { description: OK } } }
+  /api/projects/{projectId}/ai/sessions/{id}/summary:
+    parameters: [{ $ref: '#/components/parameters/projectId' }, { $ref: '#/components/parameters/id' }]
+    post: { tags: [AI], summary: '[TESTER] Draft a debrief summary for a session', responses: { '200': { description: OK } } }
+  /api/projects/{projectId}/ai/defect-report:
+    parameters: [{ $ref: '#/components/parameters/projectId' }]
+    post: { tags: [AI], summary: '[TESTER] Convert notes into a structured defect report draft', responses: { '200': { description: OK } } }
+  /api/projects/{projectId}/ai/findings/{id}/test-cases:
+    parameters: [{ $ref: '#/components/parameters/projectId' }, { $ref: '#/components/parameters/id' }]
+    post: { tags: [AI], summary: '[TESTER] Draft regression test cases from a finding', responses: { '200': { description: OK } } }
+  /api/projects/{projectId}/ai/release-risk:
+    parameters: [{ $ref: '#/components/parameters/projectId' }]
+    post: { tags: [AI], summary: '[TESTER] Summarize release risks from measured readiness indicators ({milestoneId})', responses: { '200': { description: OK } } }
+
+  /api/projects/{projectId}/integrations:
+    parameters: [{ $ref: '#/components/parameters/projectId' }]
+    get: { tags: [Integrations], summary: '[LEAD] Configured integrations and the capability catalog (available vs planned)', responses: { '200': { description: OK } } }
+    post:
+      tags: [Integrations]
+      summary: '[ADMIN] Create WEBHOOK {name,url,events,secret} or GITHUB {name,repo,token,apiUrl?,labels?}. JIRA/GITLAB return 501 (planned).'
+      responses: { '201': { description: Created }, '501': { description: Planned, not implemented } }
+  /api/projects/{projectId}/integrations/{id}:
+    parameters: [{ $ref: '#/components/parameters/projectId' }, { $ref: '#/components/parameters/id' }]
+    patch: { tags: [Integrations], summary: '[ADMIN] Update', responses: { '200': { description: OK } } }
+    delete: { tags: [Integrations], summary: '[ADMIN] Delete', responses: { '204': { description: Deleted } } }
+  /api/projects/{projectId}/integrations/{id}/test:
+    parameters: [{ $ref: '#/components/parameters/projectId' }, { $ref: '#/components/parameters/id' }]
+    post: { tags: [Integrations], summary: '[ADMIN] Send a test webhook (event "ping") or verify GitHub repository access', responses: { '200': { description: OK } } }
+  /api/projects/{projectId}/integrations/{id}/deliveries:
+    parameters: [{ $ref: '#/components/parameters/projectId' }, { $ref: '#/components/parameters/id' }]
+    get: { tags: [Integrations], summary: '[LEAD] Last 50 webhook deliveries', responses: { '200': { description: OK } } }
+  /api/projects/{projectId}/integrations/{id}/push-issue:
+    parameters: [{ $ref: '#/components/parameters/projectId' }, { $ref: '#/components/parameters/id' }]
+    post: { tags: [Integrations], summary: '[TESTER] Create a GitHub issue from an Explorix issue ({issueId}); stores the external link', responses: { '200': { description: OK }, '409': { description: Already linked } } }
+
+  /api/admin/users:
+    get: { tags: [Admin], summary: '[ORG ADMIN] Users', responses: { '200': { description: OK } } }
+    post: { tags: [Admin], summary: '[ORG ADMIN] Create user with initial password', responses: { '201': { description: Created } } }
+  /api/admin/users/{id}:
+    parameters: [{ $ref: '#/components/parameters/id' }]
+    patch: { tags: [Admin], summary: '[ORG ADMIN] Change role, deactivate/reactivate, reset password', responses: { '200': { description: OK } } }
+  /api/admin/teams:
+    get: { tags: [Admin], summary: '[ORG ADMIN] Teams', responses: { '200': { description: OK } } }
+    post: { tags: [Admin], summary: '[ORG ADMIN] Create team', responses: { '201': { description: Created } } }
+  /api/admin/settings:
+    get: { tags: [Admin], summary: '[ORG ADMIN] Organization settings, auth configuration and environment status', responses: { '200': { description: OK } } }
+    patch: { tags: [Admin], summary: '[ORG ADMIN] Update organization settings', responses: { '200': { description: OK } } }
+  /api/admin/audit:
+    get: { tags: [Admin], summary: '[ORG ADMIN] Audit log (?projectId, entityType, actorId, from, to)', responses: { '200': { description: OK } } }
+  /api/admin/export:
+    get: { tags: [Admin], summary: '[ORG ADMIN] Full organization data export (JSON)', responses: { '200': { description: OK } } }

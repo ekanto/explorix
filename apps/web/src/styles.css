@@ -1,0 +1,117 @@
+:root {
+  --ex-surface: var(--mantine-color-body);
+  --ex-subtle: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-7));
+  --ex-border: light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-4));
+  --ex-muted: light-dark(var(--mantine-color-gray-6), var(--mantine-color-dark-2));
+}
+
+html,
+body {
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: inherit;
+}
+
+.ex-link {
+  color: var(--mantine-color-anchor);
+  text-decoration: none;
+}
+.ex-link:hover {
+  text-decoration: underline;
+}
+
+.ex-key {
+  font-family: var(--mantine-font-family-monospace);
+  font-size: 0.8em;
+  color: var(--ex-muted);
+  white-space: nowrap;
+}
+
+.ex-rich {
+  line-height: 1.55;
+  word-break: break-word;
+}
+.ex-rich p {
+  margin: 0 0 0.5em;
+}
+.ex-rich ul,
+.ex-rich ol {
+  margin: 0 0 0.5em;
+  padding-left: 1.4em;
+}
+.ex-rich pre {
+  background: var(--ex-subtle);
+  padding: 8px;
+  border-radius: 6px;
+  overflow: auto;
+}
+.ex-rich code {
+  font-family: var(--mantine-font-family-monospace);
+  font-size: 0.85em;
+}
+
+.ex-prewrap {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.ex-row-link {
+  cursor: pointer;
+}
+
+.ex-timer {
+  font-family: var(--mantine-font-family-monospace);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+.ex-fade-in {
+  animation: ex-fade 160ms ease-out;
+}
+@keyframes ex-fade {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.ex-pulse {
+  animation: ex-pulse 1.6s ease-in-out infinite;
+}
+@keyframes ex-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ex-fade-in,
+  .ex-pulse {
+    animation: none;
+  }
+}
+
+/* Print-friendly reports: hide app chrome. */
+@media print {
+  .ex-no-print,
+  .mantine-AppShell-navbar,
+  .mantine-AppShell-header {
+    display: none !important;
+  }
+  .mantine-AppShell-main {
+    padding: 0 !important;
+  }
+  body {
+    background: white !important;
+  }
+}

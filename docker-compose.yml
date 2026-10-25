@@ -1,0 +1,65 @@
+# Explorix with PostgreSQL. Usage:
+#   export ENCRYPTION_KEY=$(openssl rand -base64 32)
+#   export BOOTSTRAP_ADMIN_EMAIL=you@example.com BOOTSTRAP_ADMIN_PASSWORD='a-long-passphrase-1'
+#   docker compose up --build
+# Optional demo data instead of an empty organization (run before first sign-in):
+#   docker compose --profile demo run --rm seed
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: explorix
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-explorix}
+      POSTGRES_DB: explorix
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U explorix"]
+      interval: 5s
+      retries: 20
+
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "4000:4000"
+    environment:
+      DATABASE_URL: postgresql://explorix:${POSTGRES_PASSWORD:-explorix}@db:5432/explorix
+      APP_URL: ${APP_URL:-http://localhost:4000}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?Set ENCRYPTION_KEY (32 random bytes, base64)}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      AI_PROVIDER: ${AI_PROVIDER:-none}
+      AI_API_KEY: ${AI_API_KEY:-}
+      AI_BASE_URL: ${AI_BASE_URL:-https://api.openai.com/v1}
+      AI_MODEL: ${AI_MODEL:-gpt-4o-mini}
+      SMTP_URL: ${SMTP_URL:-}
+      # First-run owner account (only used while the database has no organization)
+      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
+      BOOTSTRAP_ORG_NAME: ${BOOTSTRAP_ORG_NAME:-My Organization}
+    volumes:
+      - uploads:/data
+
+  # Demo dataset (uses the build stage, which has dev dependencies such as tsx).
+  seed:
+    profiles: ["demo"]
+    build:
+      context: .
+      target: build
+    depends_on:
+      db:
+        condition: service_healthy
+    working_dir: /app/apps/server
+    environment:
+      DATABASE_URL: postgresql://explorix:${POSTGRES_PASSWORD:-explorix}@db:5432/explorix
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?Set ENCRYPTION_KEY}
+      STORAGE_DIR: /data/uploads
+    volumes:
+      - uploads:/data
+    command: sh -c "npx prisma migrate deploy && npx tsx prisma/seed.ts && mkdir -p /data/uploads && chown -R 1000:1000 /data"
+
+volumes:
+  pgdata:
+  uploads:

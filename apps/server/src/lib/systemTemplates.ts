@@ -1,0 +1,167 @@
+/**
+ * Built-in, editable charter templates. Organizations get a copy of these
+ * (isSystem = true) which admins can edit, archive or duplicate.
+ */
+export interface TemplateSeed {
+  name: string;
+  category: string;
+  description: string;
+  missionTemplate: string;
+  timeboxMinutes: number;
+  heuristics: string[];
+  testIdeas: string[];
+  defaults: Record<string, string>;
+}
+
+export const SYSTEM_TEMPLATES: TemplateSeed[] = [
+  {
+    name: 'New feature exploration',
+    category: 'Feature',
+    description: 'Learn a newly built feature and find gaps between intent and behavior.',
+    missionTemplate: 'Explore [new feature] using realistic user journeys and variations to discover gaps, defects and usability problems.',
+    timeboxMinutes: 90,
+    heuristics: ['SFDIPOT (Structure, Function, Data, Interfaces, Platform, Operations, Time)', 'CRUD on every entity', 'Follow the data', 'Goldilocks (too small, too big, just right)'],
+    testIdeas: ['Walk the happy path end to end', 'Interrupt the flow midway and resume', 'Use boundary values in every input', 'Verify messages and empty states', 'Check behavior with existing vs. new data'],
+    defaults: { objectives: 'Understand how the feature works and identify the riskiest areas.', exitCriteria: 'Main flows covered; open questions logged; risks summarized.' },
+  },
+  {
+    name: 'Regression exploration',
+    category: 'Regression',
+    description: 'Look for unintended side effects around a change.',
+    missionTemplate: 'Explore areas adjacent to [change] using previously stable workflows to discover regressions.',
+    timeboxMinutes: 60,
+    heuristics: ['Recent changes first', 'Shared components', 'Configuration variations', 'History of defects'],
+    testIdeas: ['Re-run flows that share code with the change', 'Check previously fixed defects', 'Verify integrations and downstream reports', 'Compare against the last released build'],
+    defaults: { objectives: 'Confirm that stable behavior is unchanged.' },
+  },
+  {
+    name: 'Smoke testing',
+    category: 'Smoke',
+    description: 'Quick confidence check of a new build or deployment.',
+    missionTemplate: 'Explore the critical paths of [build/environment] quickly to discover blocking problems.',
+    timeboxMinutes: 30,
+    heuristics: ['Critical paths', 'Configuration sanity', 'Can I log in, do the main thing, and log out?'],
+    testIdeas: ['Sign in and sign out', 'Complete the top 3 user journeys', 'Check for console and server errors', 'Verify version/build number'],
+    defaults: { exitCriteria: 'No blockers on the critical paths.' },
+  },
+  {
+    name: 'Bug investigation',
+    category: 'Investigation',
+    description: 'Isolate a reported defect, find its boundaries and related failures.',
+    missionTemplate: 'Explore [reported defect] using variations of data, timing and environment to discover its root conditions and related failures.',
+    timeboxMinutes: 45,
+    heuristics: ['Vary one thing at a time', 'Minimize the reproduction', 'Look for siblings of the bug', 'Check logs'],
+    testIdeas: ['Reproduce exactly as reported', 'Reduce steps to the minimum', 'Try different users, roles and data', 'Try other browsers/devices', 'Check related features for the same pattern'],
+    defaults: { objectives: 'Produce a minimal, reliable reproduction.' },
+  },
+  {
+    name: 'API exploration',
+    category: 'API',
+    description: 'Investigate API contracts, validation and error handling.',
+    missionTemplate: 'Explore [API endpoint/resource] using valid, invalid and unexpected requests to discover contract, validation and error-handling problems.',
+    timeboxMinutes: 60,
+    heuristics: ['CRUD', 'Contract vs. implementation', 'Status codes', 'Idempotency', 'Pagination and filtering'],
+    testIdeas: ['Missing and extra fields', 'Wrong types and nulls', 'Very large payloads', 'Unauthorized and forbidden calls', 'Concurrent updates', 'Unicode and special characters'],
+    defaults: { prerequisites: 'API client (curl, Postman, HTTPie) and valid credentials.' },
+  },
+  {
+    name: 'UI and usability',
+    category: 'Usability',
+    description: 'Evaluate clarity, consistency and ease of use.',
+    missionTemplate: 'Explore [screen/workflow] as a first-time user to discover confusing, inconsistent or inefficient interactions.',
+    timeboxMinutes: 60,
+    heuristics: ['Nielsen\'s 10 usability heuristics', 'Consistency with the rest of the product', 'Error prevention', 'Recognition over recall'],
+    testIdeas: ['Complete a task without guidance', 'Check labels, help text and empty states', 'Use keyboard only', 'Undo and cancel at each step'],
+    defaults: {},
+  },
+  {
+    name: 'Authentication and authorization',
+    category: 'Security',
+    description: 'Verify identity, session and permission boundaries.',
+    missionTemplate: 'Explore [login/roles/permissions] using different users and roles to discover access-control and session-handling flaws.',
+    timeboxMinutes: 60,
+    heuristics: ['Least privilege', 'Horizontal and vertical privilege escalation', 'Session lifecycle'],
+    testIdeas: ['Access another user\'s record by changing an id', 'Use expired or revoked sessions', 'Change roles while signed in', 'Password reset abuse', 'Brute-force protection'],
+    defaults: { assumptions: 'Test accounts exist for each role.' },
+  },
+  {
+    name: 'Accessibility',
+    category: 'Accessibility',
+    description: 'Check conformance with WCAG and assistive technology support.',
+    missionTemplate: 'Explore [screen/workflow] using a keyboard, screen reader and zoom to discover accessibility barriers.',
+    timeboxMinutes: 60,
+    heuristics: ['WCAG 2.2 POUR (Perceivable, Operable, Understandable, Robust)', 'Keyboard first', 'Color is not the only signal'],
+    testIdeas: ['Tab through every interactive element', 'Check visible focus', 'Zoom to 200% and 400%', 'Run a screen reader over forms and errors', 'Check contrast of text and icons'],
+    defaults: {},
+  },
+  {
+    name: 'Security-focused testing',
+    category: 'Security',
+    description: 'Look for common web vulnerabilities in a feature.',
+    missionTemplate: 'Explore [feature] using malicious and malformed input to discover injection, exposure and access-control weaknesses.',
+    timeboxMinutes: 90,
+    heuristics: ['OWASP Top 10', 'Trust boundaries', 'Input → storage → output'],
+    testIdeas: ['Script injection in text fields', 'SQL/NoSQL injection patterns', 'File upload type and size abuse', 'Sensitive data in URLs, logs or responses', 'CSRF on state-changing actions'],
+    defaults: { assumptions: 'Testing only in an authorized, non-production environment.' },
+  },
+  {
+    name: 'Cross-browser compatibility',
+    category: 'Compatibility',
+    description: 'Find rendering and behavior differences across browsers.',
+    missionTemplate: 'Explore [workflow] across [browsers] to discover rendering and behavior differences.',
+    timeboxMinutes: 60,
+    heuristics: ['Supported browser matrix', 'Platform-specific inputs (date pickers, file inputs)'],
+    testIdeas: ['Compare layouts side by side', 'Check form controls and validation', 'File upload/download', 'Copy/paste and clipboard'],
+    defaults: {},
+  },
+  {
+    name: 'Responsive layouts',
+    category: 'Compatibility',
+    description: 'Evaluate layouts across viewport sizes and orientations.',
+    missionTemplate: 'Explore [screens] across viewport sizes and orientations to discover layout and interaction problems.',
+    timeboxMinutes: 45,
+    heuristics: ['Breakpoints', 'Touch targets', 'Content priority'],
+    testIdeas: ['Resize through each breakpoint', 'Rotate a device', 'Very long text and translations', 'Tables and wide content on small screens'],
+    defaults: {},
+  },
+  {
+    name: 'Performance-related behavior',
+    category: 'Performance',
+    description: 'Observe responsiveness under realistic and heavy conditions.',
+    missionTemplate: 'Explore [feature] with large data and slow networks to discover performance and responsiveness problems.',
+    timeboxMinutes: 60,
+    heuristics: ['Large data volumes', 'Slow network', 'Repeated actions', 'Long-running sessions'],
+    testIdeas: ['Load lists with thousands of records', 'Throttle network to 3G', 'Double-click and rapid repeat actions', 'Leave the app open for an hour'],
+    defaults: {},
+  },
+  {
+    name: 'Data validation',
+    category: 'Data',
+    description: 'Probe input validation and data integrity.',
+    missionTemplate: 'Explore [forms/imports] using boundary, invalid and unusual data to discover validation and data-integrity problems.',
+    timeboxMinutes: 60,
+    heuristics: ['Boundary value analysis', 'Equivalence partitioning', 'Unicode and locales', 'Zero, one, many'],
+    testIdeas: ['Empty, whitespace and very long values', 'Emoji and RTL text', 'Dates across time zones and DST', 'Numbers with separators and negatives', 'Duplicates and uniqueness'],
+    defaults: {},
+  },
+  {
+    name: 'Error handling and recovery',
+    category: 'Reliability',
+    description: 'Check how the system behaves when things go wrong.',
+    missionTemplate: 'Explore [workflow] by interrupting, failing and retrying operations to discover poor error handling and data loss.',
+    timeboxMinutes: 60,
+    heuristics: ['Interruptions', 'Network failure', 'Concurrency', 'Recoverability'],
+    testIdeas: ['Go offline mid-save', 'Refresh during a long operation', 'Edit the same record in two tabs', 'Server errors and timeouts', 'Back button after submit'],
+    defaults: {},
+  },
+  {
+    name: 'AI-powered feature exploration',
+    category: 'AI',
+    description: 'Investigate quality risks specific to AI/LLM-backed features.',
+    missionTemplate: 'Explore [AI feature] using varied, adversarial and ambiguous prompts to discover incorrect, unsafe or inconsistent outputs.',
+    timeboxMinutes: 90,
+    heuristics: ['Consistency across repeats', 'Grounding and hallucination', 'Prompt injection', 'Bias and safety', 'Graceful degradation'],
+    testIdeas: ['Ask the same thing several ways', 'Provide contradictory context', 'Attempt prompt injection via user content', 'Check sources/citations', 'Behavior when the model is unavailable'],
+    defaults: { risks: 'Hallucinated or unsafe content; leakage of other users\' data.' },
+  },
+];
