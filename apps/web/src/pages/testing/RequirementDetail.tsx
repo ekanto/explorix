@@ -183,7 +183,7 @@ function RequirementView({ req }: { req: any }) {
         <Grid.Col span={{ base: 12, lg: 8 }}>
           <Stack gap="lg">
             <Paper withBorder p="md">
-              <Text size="xs" fw={600} c="dimmed" tt="uppercase" mb={6} style={{ letterSpacing: '0.03em' }}>
+              <Text className="ex-label" mb={6}>
                 Description
               </Text>
               {req.description ? (
@@ -539,10 +539,10 @@ function Empty({ children }: { children: ReactNode }) {
 function Metric({ label, value, hint, color }: { label: string; value: number; hint?: string; color?: string }) {
   return (
     <div>
-      <Text size="xs" c="dimmed" fw={600} tt="uppercase" style={{ letterSpacing: '0.03em' }}>
+      <Text className="ex-label">
         {label}
       </Text>
-      <Text fz={22} fw={700} c={color}>
+      <Text fz={22} fw={650} className="ex-num" style={color ? { color: `var(--mantine-color-${color.split('.')[0]}-text)` } : undefined}>
         {value}
       </Text>
       {hint && (

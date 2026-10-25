@@ -22,7 +22,7 @@ export function Logo({ size = 28 }: { size?: number }) {
     <Group gap={8} wrap="nowrap">
       <LogoMark size={size} />
       <Text fw={750} fz={size * 0.68} style={{ letterSpacing: '-0.02em' }}>
-        Explori<Text span inherit c="amber.5">x</Text>
+        Explori<Text span inherit style={{ color: 'var(--ex-logo-x)' }}>x</Text>
       </Text>
     </Group>
   );

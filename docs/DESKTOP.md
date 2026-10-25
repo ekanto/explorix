@@ -1,6 +1,6 @@
 # Explorix Desktop for Windows
 
-Explorix Desktop 2.0 is a standalone Windows application. It bundles everything it needs:
+Explorix Desktop 3.0 is a standalone Windows application. It bundles everything it needs:
 - the Electron runtime;
 - the Explorix server;
 - an embedded PostgreSQL 18 database;
@@ -12,12 +12,12 @@ You don't need Node.js, a terminal, a browser or an internet connection. All dat
 
 | File | Use it when |
 |---|---|
-| `Explorix-Setup-2.0.0.exe` (≈ 168 MB) | **Recommended.** Per-user installer. Needs no administrator rights. Creates Start menu and desktop shortcuts, appears in *Apps & features* and can be uninstalled normally. You can choose the install folder. |
-| `Explorix-Portable-2.0.0.exe` (≈ 136 MB) | Runs without installing (for example from a USB stick). It unpacks itself to a temporary folder on **every** launch, so start-up takes about a minute. Data is still kept in `%APPDATA%\Explorix`. |
+| `Explorix-Setup-3.0.0.exe` (≈ 168 MB) | **Recommended.** Per-user installer. Needs no administrator rights. Creates Start menu and desktop shortcuts, appears in *Apps & features* and can be uninstalled normally. You can choose the install folder. |
+| `Explorix-Portable-3.0.0.exe` (≈ 137 MB) | Runs without installing (for example from a USB stick). It unpacks itself to a temporary folder on **every** launch, so start-up takes about a minute. Data is still kept in `%APPDATA%\Explorix`. |
 
 > **The installer is not code-signed.** No signing certificate was available. Windows SmartScreen may show "Windows protected your PC". Choose **More info → Run anyway**. To sign a build, set `CSC_LINK` / `CSC_KEY_PASSWORD` before running `npm run dist:win` (see [electron-builder code signing](https://www.electron.build/code-signing)).
 
-Silent install for IT deployment: `Explorix-Setup-2.0.0.exe /S` (optionally `/D=C:\path\to\folder` as the last argument). Silent uninstall: `"%LOCALAPPDATA%\Programs\Explorix\Uninstall Explorix.exe" /S /currentuser`.
+Silent install for IT deployment: `Explorix-Setup-3.0.0.exe /S` (optionally `/D=C:\path\to\folder` as the last argument). Silent uninstall: `"%LOCALAPPDATA%\Programs\Explorix\Uninstall Explorix.exe" /S /currentuser`.
 
 ### First launch
 
@@ -168,6 +168,16 @@ The 6 e2e tests cover these scenarios:
 6. A ZIP evidence package: README, manifest, all formats, the original video byte-identical, and no home paths, secrets or database files.
 7. Backup, add a file, restore. The database and evidence return to the backup state.
 8. Restart persistence: data is outside the install folder, the sign-in screen shows again, and the menu-to-renderer navigation bridge works.
+
+Results for the 3.0.0 build (UI redesign; see [DESIGN.md](DESIGN.md)) on Windows 11:
+
+| Run | Result |
+|---|---|
+| Desktop unit tests | 9 / 9 passed |
+| Desktop e2e, development build | 6 / 6 passed |
+| Desktop e2e, `release\win-unpacked\Explorix.exe` | 6 / 6 passed |
+| Server tests (`npm test`) / web e2e (`npm run test:e2e`) | 74 / 74 and 21 / 21 passed |
+| Installed app (silent install / uninstall) | Not repeated for 3.0.0. The packaging and installer configuration are unchanged from 2.0.0 (results below). |
 
 Results for the 2.0.0 build on Windows 11:
 

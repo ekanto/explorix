@@ -275,7 +275,7 @@ function IssueView({ issue: i, history, pushTargets, canEdit }: { issue: any; hi
                           <Table.Td>
                             <StatusPill status={r.status} />
                           </Table.Td>
-                          <Table.Td>
+                          <Table.Td className="ex-nowrap">
                             <Text size="sm" c="dimmed">
                               {fromNow(r.createdAt)}
                             </Text>
@@ -299,7 +299,7 @@ function IssueView({ issue: i, history, pushTargets, canEdit }: { issue: any; hi
                           <Table.Td>
                             <ResultBadge value={r.category} variant="light" />
                           </Table.Td>
-                          <Table.Td>
+                          <Table.Td className="ex-nowrap">
                             <Text size="sm" c="dimmed">
                               {fromNow(r.createdAt)}
                             </Text>

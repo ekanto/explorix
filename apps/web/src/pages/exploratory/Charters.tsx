@@ -199,7 +199,7 @@ export default function Charters() {
                               {c.key}
                             </Link>
                           </Table.Td>
-                          <Table.Td maw={420}>
+                          <Table.Td miw={280} maw={420}>
                             <Link to={`/projects/${pid}/charters/${c.id}`} className="ex-link">
                               <Text size="sm" fw={600} lineClamp={1}>
                                 {c.title}
@@ -250,7 +250,7 @@ export default function Charters() {
                               </Text>
                             )}
                           </Table.Td>
-                          <Table.Td>
+                          <Table.Td className="ex-nowrap">
                             <Tooltip label={`${c.sessionCounts.active} active · ${c.sessionCounts.completed} completed · ${c.findingsCount} findings`}>
                               <Stack gap={0}>
                                 <Text size="sm">{c.sessionCounts.total}</Text>
@@ -260,7 +260,7 @@ export default function Charters() {
                               </Stack>
                             </Tooltip>
                           </Table.Td>
-                          <Table.Td>
+                          <Table.Td className="ex-nowrap">
                             <Text size="sm">{minutes(c.timeboxMinutes)} box</Text>
                             {c.actualSeconds > 0 && (
                               <Text size="xs" c="dimmed">
@@ -268,7 +268,7 @@ export default function Charters() {
                               </Text>
                             )}
                           </Table.Td>
-                          <Table.Td>
+                          <Table.Td className="ex-nowrap">
                             <Tooltip label={fmtDateTime(c.updatedAt)}>
                               <Text size="sm" c="dimmed">
                                 {fromNow(c.updatedAt)}

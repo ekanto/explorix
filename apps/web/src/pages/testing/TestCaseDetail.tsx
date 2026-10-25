@@ -160,7 +160,7 @@ function CaseView({ tc, results }: { tc: any; results: any[] }) {
                 <TextBlock label="Test data" value={tc.testData} />
                 {tc.format !== 'TEXT' && (
                   <div>
-                    <Text size="xs" fw={600} c="dimmed" tt="uppercase" mb={6} style={{ letterSpacing: '0.03em' }}>
+                    <Text className="ex-label" mb={6}>
                       {tc.format === 'GHERKIN' ? 'Scenario' : `Steps (${tc.steps.length})`}
                     </Text>
                     {tc.format === 'GHERKIN' ? <GherkinView source={tc.gherkin} /> : <StepsTable steps={tc.steps} />}
@@ -336,7 +336,7 @@ function ResultsTable({ results }: { results: any[] }) {
                   <Table.Td>
                     <UserLabel user={r.createdBy} fallback="Unknown" />
                   </Table.Td>
-                  <Table.Td>
+                  <Table.Td className="ex-nowrap">
                     <Tooltip label={fmtDateTime(r.createdAt)}>
                       <Text size="xs" c="dimmed">
                         {fromNow(r.createdAt)}
@@ -512,7 +512,7 @@ function Revisions({ tc, canEdit, onRestored }: { tc: any; canEdit: boolean; onR
                         <Table.Td>
                           <UserLabel user={r.author} fallback="Unknown" />
                         </Table.Td>
-                        <Table.Td>
+                        <Table.Td className="ex-nowrap">
                           <Tooltip label={fmtDateTime(r.createdAt)}>
                             <Text size="xs" c="dimmed">
                               {fromNow(r.createdAt)}

@@ -6,14 +6,14 @@ Write a mission, explore, capture timestamped observations with evidence, separa
 
 > Explorix is an original, independent product. It is not affiliated with Testmo or any other vendor named in the research documents.
 
-## Explorix Desktop 2.0 for Windows
+## Explorix Desktop 3.0 for Windows
 
-Explorix 2.0 also ships as a **standalone Windows desktop application**. It bundles the Explorix server, an embedded PostgreSQL database and the UI in one installer, so you don't need Node.js, a terminal or a browser. It works offline and keeps all data in `%APPDATA%\Explorix`.
+Explorix 3.0 also ships as a **standalone Windows desktop application**. It bundles the Explorix server, an embedded PostgreSQL database and the UI in one installer, so you don't need Node.js, a terminal or a browser. It works offline and keeps all data in `%APPDATA%\Explorix`.
 
 | Download (built into `apps/desktop/release/`) | |
 |---|---|
-| `Explorix-Setup-2.0.0.exe` | Per-user installer with Start menu and desktop shortcuts and an uninstaller. Your data is kept on uninstall. **Recommended.** |
-| `Explorix-Portable-2.0.0.exe` | Runs without installing. Slower to start (about 1 minute) because it unpacks itself on each launch. |
+| `Explorix-Setup-3.0.0.exe` | Per-user installer with Start menu and desktop shortcuts and an uninstaller. Your data is kept on uninstall. **Recommended.** |
+| `Explorix-Portable-3.0.0.exe` | Runs without installing. Slower to start (about 1 minute) because it unpacks itself on each launch. |
 
 The builds are **not code-signed**, so Windows SmartScreen will warn on first run (*More info → Run anyway*).
 
@@ -109,14 +109,14 @@ First-time e2e setup: `npx playwright install chromium`.
 
 ## Test results
 
-Results from the 2.0 build, on Windows 11 with Node 26 and embedded PostgreSQL 18:
+Results from the 3.0 build, on Windows 11 with Node 26 and embedded PostgreSQL 18:
 
 | Suite | Result | What it covers |
 |---|---|---|
 | `npm test` | **74 / 74 passed** (12 files) | <ul><li>Auth, CSRF, lockout and token scope</li><li>IDOR and role enforcement</li><li>Charter → session → finding → issue workflow</li><li>Timer math</li><li>Reports compared with direct DB counts</li><li>Export correctness and formula-injection guard</li><li>JUnit/Playwright ingestion and flaky detection</li><li>AI draft-only behavior</li><li>Webhook signing and delivery, GitHub push (stubbed endpoint)</li><li>First-run bootstrap and setup wizard</li><li>Evidence: content sniffing, invalid and oversized files, video metadata, frames and byte ranges, annotated copies keep originals intact, ordering, trash and restore</li><li>Reporting: DOCX, PDF, MD and HTML parsed and checked, relative links survive a move, packages and manifests, video never dropped, cancellation</li><li>Backup and restore: checksums, tampered, foreign and too-new backups, safety backup, restore from an older data version</li></ul> |
 | `npm run test:e2e` | **21 / 21 passed** (Chromium) | <ul><li>Sign-in and access control</li><li>Full workbench lifecycle: launch, timer, autosave across reloads, findings with screenshots, pause/resume, finish, review</li><li>Charter create/edit/duplicate/archive</li><li>Bulk session assignment</li><li>Findings exports vs the API</li><li>Dashboard KPIs vs persisted records</li><li>Smoke pass over all screens that fails on console errors, uncaught exceptions or 5xx responses</li></ul> |
 | `npm test -w @explorix/desktop` | **9 / 9 passed** | IPC validation and sender trust, URL policy, Save As overwrite protection and atomic saves, cancellation, settings recovery, DPAPI secrets |
-| Desktop e2e (Playwright `_electron`) | **6 / 6 passed** three times: on the development build, on `win-unpacked`, and on the app installed by `Explorix-Setup-2.0.0.exe` | <ul><li>Window security</li><li>First-run setup and the sample project</li><li>A real screen recording attached to a finding</li><li>PDF, DOCX, HTML and Markdown reports parsed and their links resolved</li><li>Overwrite protection</li><li>A ZIP package with a byte-identical original video</li><li>Backup and restore</li><li>Persistence across a restart</li></ul> |
+| Desktop e2e (Playwright `_electron`) | **6 / 6 passed** on the development build and on the packaged `win-unpacked` app (3.0.0); on 2.0.0 also on the app installed by the setup exe | <ul><li>Window security</li><li>First-run setup and the sample project</li><li>A real screen recording attached to a finding</li><li>PDF, DOCX, HTML and Markdown reports parsed and their links resolved</li><li>Overwrite protection</li><li>A ZIP package with a byte-identical original video</li><li>Backup and restore</li><li>Persistence across a restart</li></ul> |
 
 The installer was also tested with a silent install, launch, clean shutdown and uninstall; the data folder was preserved. Details are in [docs/DESKTOP.md](docs/DESKTOP.md#tests).
 
@@ -156,6 +156,7 @@ scripts       Dev orchestration (scripts/dev.mjs)
 | [docs/METRICS.md](docs/METRICS.md) | Exact definition of every dashboard metric (measured vs estimated) |
 | [docs/DESKTOP.md](docs/DESKTOP.md) | Windows desktop app: install, data locations, backups, security model, build, tests, limitations |
 | [docs/REPORTING.md](docs/REPORTING.md) | Report wizard, templates, formats, video representation, evidence packages |
+| [docs/DESIGN.md](docs/DESIGN.md) | Design system: audit, light/dark tokens, type scale, layout rules, accessibility, visual validation |
 | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Production deployment, backup and recovery |
 | [docs/CHECKLIST.md](docs/CHECKLIST.md) | Feature implementation checklist and acceptance criteria evidence |
 | [docs/ROADMAP.md](docs/ROADMAP.md) | Known limitations and prioritized roadmap |

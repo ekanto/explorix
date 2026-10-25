@@ -224,11 +224,11 @@ function RunView({ run }: { run: any }) {
               const n = pr[c.toLowerCase()] ?? 0;
               return (
                 <UnstyledButton key={c} onClick={() => set({ fs: fs === c ? null : c })} aria-pressed={fs === c} aria-label={`Filter ${RESULT_CATEGORY[c].label}`}>
-                  <Text size="xs" c="dimmed" fw={600} tt="uppercase" style={{ letterSpacing: '0.03em', textDecoration: fs === c ? 'underline' : undefined }}>
+                  <Text className="ex-label" style={{ textDecoration: fs === c ? 'underline' : undefined }}>
                     {RESULT_CATEGORY[c].label}
                   </Text>
                   <Group gap={6} align="baseline">
-                    <Text fz={22} fw={700} c={n && c !== 'UNTESTED' && c !== 'SKIPPED' ? `${RESULT_CATEGORY[c].color}.7` : undefined}>
+                    <Text fz={22} fw={650} className="ex-num" style={n && c !== 'UNTESTED' && c !== 'SKIPPED' ? { color: `var(--mantine-color-${RESULT_CATEGORY[c].color}-text)` } : undefined}>
                       {n}
                     </Text>
                     <Text size="xs" c="dimmed">
@@ -240,7 +240,7 @@ function RunView({ run }: { run: any }) {
             })}
           </Group>
           <Stack gap={0} align="flex-end">
-            <Text fz={22} fw={700}>
+            <Text fz={22} fw={650} className="ex-num">
               {pr.total ? Math.round((pr.done / pr.total) * 100) : 0}%
             </Text>
             <Text size="xs" c="dimmed">

@@ -314,7 +314,7 @@ export default function Findings() {
                               </Text>
                             )}
                           </Table.Td>
-                          <Table.Td>
+                          <Table.Td className="ex-nowrap">
                             <Tooltip label={fmtDateTime(x.createdAt)}>
                               <Text size="sm" c="dimmed">
                                 {fromNow(x.createdAt)}

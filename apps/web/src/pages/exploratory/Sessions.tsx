@@ -343,7 +343,7 @@ export default function Sessions() {
                                 {s.key}
                               </Link>
                             </Table.Td>
-                            <Table.Td maw={380}>
+                            <Table.Td miw={260} maw={380}>
                               <Link to={`/projects/${pid}/sessions/${s.id}`} className="ex-link">
                                 <Text size="sm" fw={600} lineClamp={1}>
                                   {s.title}
@@ -389,7 +389,7 @@ export default function Sessions() {
                             <Table.Td>
                               <PriorityBadge value={s.priority} />
                             </Table.Td>
-                            <Table.Td miw={130}>
+                            <Table.Td miw={130} className="ex-nowrap">
                               <Text size="xs" c={s.overTimebox ? 'red' : undefined} fw={s.overTimebox ? 600 : undefined}>
                                 {duration(s.elapsedSeconds)} / {minutes(s.timeboxMinutes)}
                               </Text>
@@ -411,12 +411,12 @@ export default function Sessions() {
                                 </Text>
                               )}
                             </Table.Td>
-                            <Table.Td>
+                            <Table.Td className="ex-nowrap">
                               <Text size="sm" c="dimmed">
                                 {s.startedAt ? fmtDate(s.startedAt) : '—'}
                               </Text>
                             </Table.Td>
-                            <Table.Td>
+                            <Table.Td className="ex-nowrap">
                               <Tooltip label={fmtDateTime(s.updatedAt)}>
                                 <Text size="sm" c="dimmed">
                                   {fromNow(s.updatedAt)}

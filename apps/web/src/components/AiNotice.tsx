@@ -6,9 +6,9 @@ import type { AiMeta, AiStatus } from '../lib/ai';
 export function AiSetupNotice({ status }: { status: AiStatus | undefined }) {
   if (!status || status.enabled) return null;
   return (
-    <Alert color="gray" icon={<IconSparkles size={18} />} title="AI assistance is not configured">
+    <Alert color="gray" icon={<IconSparkles size={18} />} title="AI assistance is not configured" styles={{ body: { minWidth: 0 } }}>
       <Text size="sm">Everything else in Explorix works without AI. To enable optional drafting and summaries, an administrator sets server environment variables:</Text>
-      <Code block mt="xs">
+      <Code block mt="xs" fz="xs" style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
         {status.setupInstructions ?? 'AI_PROVIDER=openai\nAI_API_KEY=...\nAI_MODEL=gpt-4o-mini'}
       </Code>
     </Alert>

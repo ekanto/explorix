@@ -389,7 +389,7 @@ function RunsPanel({ sp, set, onImport }: { sp: URLSearchParams; set: Setter; on
                         <Table.Td>
                           <Text size="sm">{fmtMs(r.durationMs)}</Text>
                         </Table.Td>
-                        <Table.Td>
+                        <Table.Td className="ex-nowrap">
                           <Tooltip label={new Date(r.startedAt).toLocaleString()}>
                             <Text size="sm">{fromNow(r.startedAt)}</Text>
                           </Tooltip>

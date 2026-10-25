@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
-import { Alert, Avatar, Badge, Box, Center, Group, Loader, Stack, Text, ThemeIcon, Title, Tooltip, type BadgeProps } from '@mantine/core';
+import { Alert, Avatar, Badge, Box, Center, Group, Loader, SimpleGrid, Text, Title, Tooltip, type BadgeProps, type BoxProps } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
-import { IconAlertTriangle, IconCompass, IconLock } from '@tabler/icons-react';
+import { IconAlertTriangle, IconBug, IconCompass, IconLock } from '@tabler/icons-react';
 import { ApiError, errorMessage } from '../lib/api';
 import { CHARTER_STATUS, FINDING_STATUS, ISSUE_STATUS, PRIORITY, RESULT_CATEGORY, SESSION_STATUS, SEVERITY } from '../lib/constants';
 import { initials, titleCase } from '../lib/format';
@@ -27,18 +27,18 @@ export const ResultBadge = (p: { value: string } & BadgeProps) => <EnumBadge met
 
 export function PriorityBadge({ value, ...rest }: { value: string | null | undefined } & BadgeProps) {
   if (!value) return null;
-  return <EnumBadge value={value} meta={PRIORITY} variant="outline" {...rest} />;
+  return <EnumBadge value={value} meta={PRIORITY} variant="dot" {...rest} />;
 }
 
 export function SeverityBadge({ value, ...rest }: { value: string | null | undefined } & BadgeProps) {
   if (!value) return null;
-  return <EnumBadge value={value} meta={SEVERITY} variant="filled" {...rest} />;
+  return <EnumBadge value={value} meta={SEVERITY} variant="light" {...rest} />;
 }
 
 export function ClassificationBadge({ c, ...rest }: { c: { name: string; color: string; isDefect?: boolean } | null | undefined } & Omit<BadgeProps, 'c'>) {
   if (!c) return null;
   return (
-    <Badge color={c.color} variant={c.isDefect ? 'filled' : 'light'} {...rest}>
+    <Badge color={c.color} variant="light" leftSection={c.isDefect ? <IconBug size={11} aria-hidden /> : undefined} {...rest}>
       {c.name}
     </Badge>
   );
@@ -65,17 +65,17 @@ export function UserAvatar({ user, size = 26 }: { user: { name: string; avatarCo
   );
 }
 
-export function UserLabel({ user, fallback = 'Unassigned' }: { user: { name: string; avatarColor?: string | null } | null | undefined; fallback?: string }) {
+export function UserLabel({ user, fallback = 'Unassigned', size = 'sm' }: { user: { name: string; avatarColor?: string | null } | null | undefined; fallback?: string; size?: 'xs' | 'sm' }) {
   if (!user)
     return (
-      <Text size="sm" c="dimmed">
+      <Text size={size} c="dimmed">
         {fallback}
       </Text>
     );
   return (
-    <Group gap={6} wrap="nowrap">
-      <UserAvatar user={user} size={22} />
-      <Text size="sm" truncate>
+    <Group gap={6} wrap="nowrap" style={{ minWidth: 0 }}>
+      <UserAvatar user={user} size={size === 'xs' ? 18 : 22} />
+      <Text size={size} c={size === 'xs' ? 'dimmed' : undefined} truncate>
         {user.name}
       </Text>
     </Group>
@@ -90,6 +90,7 @@ export function KeyLink({ to, k, children }: { to: string; k?: string; children?
   );
 }
 
+/** Standard page heading: optional kicker/breadcrumb, h1 title, description and right-aligned actions. */
 export function PageHeader({
   title,
   subtitle,
@@ -102,47 +103,126 @@ export function PageHeader({
   kicker?: ReactNode;
 }) {
   return (
-    <Group justify="space-between" align="flex-start" mb="lg" wrap="wrap" gap="sm">
-      <Box style={{ minWidth: 0, flex: 1 }}>
-        {kicker && (
-          <Text size="xs" c="dimmed" fw={600} tt="uppercase" mb={2} style={{ letterSpacing: '0.04em' }}>
-            {kicker}
-          </Text>
-        )}
-        <Title order={2} fz={24}>
+    <header className="ex-page-header">
+      <div className="ex-page-header__text">
+        {kicker && <div className="ex-kicker">{kicker}</div>}
+        <Title order={1} fz={26} lh={1.25} style={{ letterSpacing: '-0.015em', overflowWrap: 'anywhere' }}>
           {title}
         </Title>
         {subtitle && (
-          <Text c="dimmed" size="sm" mt={4}>
+          <Text c="dimmed" size="md" mt={6} maw={760}>
             {subtitle}
           </Text>
         )}
-      </Box>
-      {actions && (
-        <Group gap="xs" className="ex-no-print">
-          {actions}
-        </Group>
+      </div>
+      {actions && <div className="ex-page-header__actions ex-no-print">{actions}</div>}
+    </header>
+  );
+}
+
+/**
+ * Empty state. The default variant centres in its container (lists, pages); `compact` renders an
+ * inline row for empty sections inside dashboards and cards so they don't reserve large blank areas.
+ */
+export function EmptyState({ title, description, action, icon, compact }: { title: string; description?: ReactNode; action?: ReactNode; icon?: ReactNode; compact?: boolean }) {
+  if (compact)
+    return (
+      <div className="ex-empty" data-compact>
+        <span className="ex-empty__icon" aria-hidden>
+          {icon ?? <IconCompass size={18} />}
+        </span>
+        <Box style={{ flex: 1, minWidth: 0 }}>
+          <Text fw={600} size="sm">
+            {title}
+          </Text>
+          {description && (
+            <Text size="sm" c="dimmed">
+              {description}
+            </Text>
+          )}
+        </Box>
+        {action}
+      </div>
+    );
+  return (
+    <div className="ex-empty">
+      <span className="ex-empty__icon" aria-hidden>
+        {icon ?? <IconCompass size={22} />}
+      </span>
+      <Text fw={600}>{title}</Text>
+      {description && (
+        <Text size="sm" c="dimmed" maw={440}>
+          {description}
+        </Text>
       )}
+      {action && <Box mt="sm">{action}</Box>}
+    </div>
+  );
+}
+
+/** Heading for a group of cards on a page (sits outside the cards, aligned with the page grid). */
+export function SectionHeading({ children, action }: { children: ReactNode; action?: ReactNode }) {
+  return (
+    <Group justify="space-between" align="center" mb="sm" mt={4} wrap="nowrap">
+      <Title order={2} fz={16} fw={600}>
+        {children}
+      </Title>
+      {action}
     </Group>
   );
 }
 
-export function EmptyState({ title, description, action, icon }: { title: string; description?: ReactNode; action?: ReactNode; icon?: ReactNode }) {
+/**
+ * Container-aware grid for StatCards: columns follow the space the grid actually has (sidebar
+ * expanded or collapsed), not the window width, so cards never get squeezed into truncated labels.
+ */
+export function StatGrid({ children, max = 4 }: { children: ReactNode; max?: 3 | 4 | 6 | 7 }) {
+  const cols = { 3: { base: 1, '520px': 3 }, 4: { base: 1, '420px': 2, '860px': 4 }, 6: { base: 1, '420px': 2, '700px': 3, '1240px': 6 }, 7: { base: 1, '420px': 2, '700px': 4, '1080px': 7 } }[max];
   return (
-    <Center py={48}>
-      <Stack align="center" gap="xs" maw={420} ta="center">
-        <ThemeIcon size={48} radius="xl" variant="light">
-          {icon ?? <IconCompass size={26} />}
-        </ThemeIcon>
-        <Text fw={600}>{title}</Text>
-        {description && (
-          <Text size="sm" c="dimmed">
-            {description}
-          </Text>
-        )}
-        {action}
-      </Stack>
-    </Center>
+    <SimpleGrid type="container" cols={cols} spacing="md">
+      {children}
+    </SimpleGrid>
+  );
+}
+
+/** Titled content section (card) with optional description and header actions. */
+export function SectionCard({
+  title,
+  description,
+  actions,
+  children,
+  bodyProps,
+  ...rest
+}: {
+  title?: ReactNode;
+  description?: ReactNode;
+  actions?: ReactNode;
+  children?: ReactNode;
+  bodyProps?: BoxProps;
+} & Omit<BoxProps, 'title'>) {
+  return (
+    <Box component="section" className="ex-section" {...rest}>
+      {(title || actions) && (
+        <div className="ex-section__header">
+          <Box style={{ minWidth: 0 }}>
+            {title && (
+              <Title order={2} className="ex-section__title">
+                {title}
+              </Title>
+            )}
+            {description && <div className="ex-section__desc">{description}</div>}
+          </Box>
+          {actions && (
+            <Group gap={6} wrap="nowrap">
+              {actions}
+            </Group>
+          )}
+        </div>
+      )}
+      <Box className="ex-section__body" {...bodyProps}>
+        {children}
+      </Box>
+    </Box>
   );
 }
 
@@ -200,7 +280,7 @@ export function TextBlock({ label, value }: { label: string; value: ReactNode | 
   if (value == null || value === '' || (Array.isArray(value) && value.length === 0)) return null;
   return (
     <Box>
-      <Text size="xs" fw={600} c="dimmed" tt="uppercase" mb={2} style={{ letterSpacing: '0.03em' }}>
+      <Text size="sm" fw={600} c="var(--ex-fg-secondary)" mb={2}>
         {label}
       </Text>
       {typeof value === 'string' ? (
@@ -214,27 +294,49 @@ export function TextBlock({ label, value }: { label: string; value: ReactNode | 
   );
 }
 
-export function StatCard({ label, value, hint, color, icon }: { label: string; value: ReactNode; hint?: ReactNode; color?: string; icon?: ReactNode }) {
-  return (
-    <Box p="md" style={{ border: '1px solid var(--ex-border)', borderRadius: 'var(--mantine-radius-md)', background: 'var(--ex-surface)' }}>
-      <Group justify="space-between" align="flex-start" wrap="nowrap">
-        <Text size="xs" c="dimmed" fw={600} tt="uppercase" style={{ letterSpacing: '0.03em' }}>
+/**
+ * Metric card with a fixed geometry (label row, value, hint) so cards in a grid always align.
+ * `color` tints the value; use it only for metrics where the colour carries meaning (risk, defects).
+ */
+export function StatCard({
+  label,
+  value,
+  hint,
+  color,
+  icon,
+  tooltip,
+}: {
+  label: string;
+  value: ReactNode;
+  hint?: ReactNode;
+  color?: string;
+  icon?: ReactNode;
+  tooltip?: string;
+}) {
+  const card = (
+    <div className="ex-stat" tabIndex={tooltip ? 0 : undefined}>
+      <div className="ex-stat__label">
+        <span className="ex-stat__label-text" title={label}>
           {label}
-        </Text>
+        </span>
         {icon && (
-          <ThemeIcon variant="light" color={color ?? 'explorix'} size="md">
+          <span className="ex-stat__icon" aria-hidden>
             {icon}
-          </ThemeIcon>
+          </span>
         )}
-      </Group>
-      <Text fz={26} fw={700} mt={4} c={color && color !== 'explorix' ? `${color}.7` : undefined}>
-        {value}
-      </Text>
-      {hint && (
-        <Text size="xs" c="dimmed" mt={2}>
-          {hint}
-        </Text>
-      )}
-    </Box>
+      </div>
+      <div>
+        <div className="ex-stat__value" style={color && color !== 'explorix' ? { color: `var(--mantine-color-${color}-text)` } : undefined}>
+          {value}
+        </div>
+        <div className="ex-stat__hint">{hint ?? '\u00a0'}</div>
+      </div>
+    </div>
+  );
+  if (!tooltip) return card;
+  return (
+    <Tooltip label={tooltip} multiline w={260}>
+      {card}
+    </Tooltip>
   );
 }

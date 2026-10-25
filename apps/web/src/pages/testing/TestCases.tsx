@@ -149,10 +149,10 @@ export default function TestCases() {
         }
       />
       <Grid gap="lg">
-        <Grid.Col span={{ base: 12, md: 3 }}>
+        <Grid.Col span={{ base: 12, lg: 3 }}>
           <FolderTree folders={folders} selected={folder} onSelect={(id) => set({ folder: id })} canEdit={canEdit} canDelete={can('LEAD')} />
         </Grid.Col>
-        <Grid.Col span={{ base: 12, md: 9 }}>
+        <Grid.Col span={{ base: 12, lg: 9 }}>
           <Stack gap="sm">
             <Group gap="xs" wrap="wrap">
               <SearchInput value={get('q')} onChange={(q) => set({ q })} placeholder="Search title, description or C-12" />
@@ -307,7 +307,7 @@ export default function TestCases() {
                                 <Table.Td>
                                   <span className="ex-key">{c.key}</span>
                                 </Table.Td>
-                                <Table.Td>
+                                <Table.Td miw={260}>
                                   <Group gap={6} wrap="nowrap">
                                     <Text size="sm" fw={500} component={Link} to={`/projects/${pid}/test-cases/${c.id}`} className="ex-link" onClick={(e: MouseEvent) => e.stopPropagation()} lineClamp={1}>
                                       {c.title}
@@ -382,7 +382,7 @@ export default function TestCases() {
                                     </Text>
                                   )}
                                 </Table.Td>
-                                <Table.Td>
+                                <Table.Td className="ex-nowrap">
                                   <Tooltip label={fmtDateTime(c.updatedAt)}>
                                     <Text size="xs" c="dimmed">
                                       {fromNow(c.updatedAt)}
@@ -536,7 +536,7 @@ function FolderTree({ folders, selected, onSelect, canEdit, canDelete }: { folde
   return (
     <Paper withBorder p="xs" component="nav" aria-label="Test case folders">
       <Group justify="space-between" px={6} mb={4}>
-        <Text size="xs" fw={700} c="dimmed" tt="uppercase">
+        <Text className="ex-label">
           Folders
         </Text>
         {canEdit && (

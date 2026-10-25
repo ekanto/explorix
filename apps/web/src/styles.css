@@ -1,17 +1,623 @@
+/*
+ * Explorix design tokens — single source of truth for custom styling.
+ * Tokens are defined per Mantine color scheme (data attribute on <html>), never with
+ * CSS light-dark(): that function needs `color-scheme`, which previously made every
+ * token resolve to its light value in dark mode.
+ * Reference: docs/DESIGN.md
+ */
 :root {
-  --ex-surface: var(--mantine-color-body);
-  --ex-subtle: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-7));
-  --ex-border: light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-4));
-  --ex-muted: light-dark(var(--mantine-color-gray-6), var(--mantine-color-dark-2));
+  --ex-radius-sm: 6px;
+  --ex-radius-md: 8px;
+  --ex-radius-lg: 10px;
+  --ex-header-h: 52px;
+  --ex-nav-row: 36px;
+  --ex-nav-row-nested: 34px;
+  --ex-content-max: 1560px;
+  --ex-ease: cubic-bezier(0.2, 0, 0, 1);
+  --ex-dur: 150ms;
 }
 
+:root[data-mantine-color-scheme='light'] {
+  color-scheme: light;
+  --ex-bg: #f5f6f8;
+  --ex-sidebar: #fafbfc;
+  --ex-header: #ffffff;
+  --ex-surface: #ffffff;
+  --ex-surface-elevated: #ffffff;
+  --ex-subtle: #f3f5f7;
+  --ex-hover: rgba(23, 26, 31, 0.045);
+  --ex-fg: #171a1f;
+  --ex-fg-secondary: #3e4652;
+  --ex-muted: #5b6472;
+  --ex-border: #e1e5ea;
+  --ex-border-strong: #cdd3db;
+  --ex-accent: #0f766e;
+  --ex-accent-fg: #ffffff;
+  --ex-accent-soft: #e3f4f1;
+  --ex-accent-soft-fg: #0b5c55;
+  --ex-focus: #0f766e;
+  --ex-success: #2b8a3e;
+  --ex-warning: #b35c00;
+  --ex-danger: #c92a2a;
+  --ex-info: #1864ab;
+  --ex-shadow-card: 0 1px 2px rgba(16, 24, 40, 0.04);
+  --ex-shadow-pop: 0 10px 28px -8px rgba(16, 24, 40, 0.2), 0 2px 6px rgba(16, 24, 40, 0.06);
+  --ex-scrollbar: #c7cdd5;
+  --ex-logo-x: #b87400;
+}
+
+:root[data-mantine-color-scheme='dark'] {
+  color-scheme: dark;
+  --ex-bg: #17191d;
+  --ex-sidebar: #1b1e23;
+  --ex-header: #1b1e23;
+  --ex-surface: #20242a;
+  --ex-surface-elevated: #262b32;
+  --ex-subtle: #1c2025;
+  --ex-hover: rgba(255, 255, 255, 0.055);
+  --ex-fg: #f1f4f8;
+  --ex-fg-secondary: #b0bac8;
+  --ex-muted: #9ba6b5;
+  --ex-border: #323943;
+  --ex-border-strong: #414955;
+  --ex-accent: #20b8a6;
+  --ex-accent-fg: #0b1513;
+  --ex-accent-soft: rgba(32, 184, 166, 0.14);
+  --ex-accent-soft-fg: #5fdccb;
+  --ex-focus: #3ccfbc;
+  --ex-success: #51cf66;
+  --ex-warning: #fcc419;
+  --ex-danger: #ff6b6b;
+  --ex-info: #4dabf7;
+  --ex-shadow-card: none;
+  --ex-shadow-pop: 0 12px 32px -8px rgba(0, 0, 0, 0.6), 0 2px 6px rgba(0, 0, 0, 0.3);
+  --ex-scrollbar: #3b434e;
+  --ex-logo-x: #fbbf24;
+}
+
+/* ---------- Base ---------- */
 html,
 body {
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  background: var(--ex-bg);
+  font-feature-settings: 'cv11', 'ss01';
 }
 
 a {
   color: inherit;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--ex-accent) 28%, transparent);
+}
+
+:focus-visible {
+  outline: 2px solid var(--ex-focus);
+  outline-offset: 2px;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--ex-scrollbar) transparent;
+}
+
+/* ---------- Mantine alignment with tokens ---------- */
+[data-mantine-color-scheme] .mantine-Paper-root {
+  --paper-border-color: var(--ex-border);
+}
+[data-mantine-color-scheme] .mantine-AppShell-root {
+  --app-shell-border-color: var(--ex-border);
+}
+.mantine-AppShell-main {
+  background: var(--ex-bg);
+  min-height: 100dvh;
+}
+.mantine-AppShell-header {
+  background: var(--ex-header);
+}
+.mantine-AppShell-navbar {
+  background: var(--ex-sidebar);
+}
+
+/* Floating surfaces sit one step above cards in dark mode. */
+.mantine-Popover-dropdown,
+.mantine-Menu-dropdown,
+.mantine-Combobox-dropdown,
+.mantine-Select-dropdown,
+.mantine-MultiSelect-dropdown,
+.mantine-Autocomplete-dropdown,
+.mantine-TagsInput-dropdown,
+.mantine-HoverCard-dropdown,
+.mantine-Modal-content,
+.mantine-Modal-header,
+.mantine-Drawer-content,
+.mantine-Drawer-header,
+.mantine-Spotlight-content,
+.mantine-Notification-root {
+  background-color: var(--ex-surface-elevated);
+}
+.mantine-Popover-dropdown,
+.mantine-Menu-dropdown,
+.mantine-Combobox-dropdown {
+  border-color: var(--ex-border-strong);
+  box-shadow: var(--ex-shadow-pop);
+}
+.mantine-Modal-title,
+.mantine-Drawer-title {
+  font-size: var(--mantine-font-size-lg);
+  font-weight: 600;
+}
+
+/* Control geometry: 32px small, 36px default, 42px large. */
+.mantine-Button-root {
+  --button-height-xs: 32px;
+  font-weight: 550;
+}
+.mantine-Input-wrapper,
+.mantine-InputWrapper-root {
+  --input-height-xs: 32px;
+}
+.mantine-ActionIcon-root {
+  --ai-size-lg: 36px;
+}
+.mantine-Input-input {
+  border-color: var(--ex-border-strong);
+}
+.mantine-Input-input::placeholder {
+  opacity: 1;
+}
+
+/* Badges: sentence case, readable sizes (Mantine's uppercase 9–11px labels were hard to read and truncated). */
+.mantine-Badge-root {
+  --badge-height-xs: 18px;
+  --badge-height-sm: 20px;
+  --badge-height-md: 22px;
+  --badge-height-lg: 26px;
+  --badge-fz-xs: 10.5px;
+  --badge-fz-sm: 11.5px;
+  --badge-fz-md: 12px;
+  --badge-fz-lg: 13px;
+  --badge-padding-x-xs: 6px;
+  --badge-padding-x-sm: 7px;
+  --badge-padding-x-md: 8px;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.mantine-Badge-root[data-circle] {
+  padding-inline: 0;
+}
+
+/* Tables: quiet headers, tabular numbers, clear hover. */
+.mantine-Table-table {
+  --table-border-color: var(--ex-border);
+  --table-hover-color: var(--ex-hover);
+}
+.mantine-Table-th {
+  font-size: var(--mantine-font-size-xs);
+  font-weight: 600;
+  color: var(--ex-muted);
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+}
+.mantine-Table-td {
+  font-variant-numeric: tabular-nums;
+}
+/* Status/priority badges in table cells must never be squeezed into "Rea…" — the column grows instead. */
+.mantine-Table-td .mantine-Badge-root {
+  min-width: max-content;
+}
+.ex-nowrap {
+  white-space: nowrap;
+}
+/* Field/group label for read-only content — sentence case, readable, distinct from the value below it. */
+.ex-label {
+  font-size: var(--mantine-font-size-sm);
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--ex-fg-secondary);
+}
+/* Two read-only fields side by side; collapses entirely when both are empty (TextBlock renders null). */
+.ex-field-pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: var(--mantine-spacing-md);
+}
+.ex-field-pair:empty {
+  display: none;
+}
+
+.mantine-Tabs-tab {
+  font-weight: 500;
+}
+.mantine-Kbd-root {
+  background: var(--ex-subtle);
+  border-color: var(--ex-border-strong);
+  color: var(--ex-fg-secondary);
+}
+.mantine-Alert-title {
+  font-weight: 600;
+}
+.mantine-Progress-root {
+  --progress-bg: color-mix(in srgb, var(--ex-border) 80%, transparent);
+}
+
+/* ---------- App shell ---------- */
+.ex-header-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  width: 380px;
+  max-width: 38vw;
+  padding: 0 6px 0 10px;
+  border: 1px solid var(--ex-border-strong);
+  border-radius: var(--ex-radius-md);
+  background: var(--ex-subtle);
+  color: var(--ex-muted);
+  transition: border-color var(--ex-dur) var(--ex-ease), background var(--ex-dur) var(--ex-ease);
+}
+.ex-header-search:hover {
+  border-color: var(--ex-accent);
+  background: var(--ex-surface);
+}
+
+.ex-nav-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: 28px;
+  margin-top: 12px;
+  padding: 0 10px;
+  border-radius: var(--ex-radius-sm);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ex-muted);
+}
+.ex-nav-section:hover {
+  color: var(--ex-fg-secondary);
+}
+
+.ex-nav {
+  position: relative;
+  min-height: var(--ex-nav-row);
+  padding: 0 10px;
+  border-radius: var(--ex-radius-sm);
+  color: var(--ex-fg-secondary);
+  transition: background var(--ex-dur) var(--ex-ease), color var(--ex-dur) var(--ex-ease);
+}
+.ex-nav .mantine-NavLink-label {
+  font-size: var(--mantine-font-size-md);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ex-nav .mantine-NavLink-section[data-position='left'] {
+  margin-inline-end: 10px;
+  color: var(--ex-muted);
+}
+.ex-nav:hover {
+  background: var(--ex-hover);
+  color: var(--ex-fg);
+}
+.ex-nav[data-active],
+.ex-nav[data-active]:hover {
+  background: var(--ex-accent-soft);
+  color: var(--ex-fg);
+}
+.ex-nav[data-active] .mantine-NavLink-label {
+  font-weight: 600;
+}
+.ex-nav[data-active] .mantine-NavLink-section[data-position='left'] {
+  color: var(--ex-accent-soft-fg);
+}
+.ex-nav[data-active]::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--ex-accent);
+}
+.ex-nav[data-nested] {
+  min-height: var(--ex-nav-row-nested);
+  padding-left: 38px;
+}
+.ex-nav[data-nested] .mantine-NavLink-label {
+  font-size: var(--mantine-font-size-sm);
+}
+.ex-nav[data-rail] {
+  justify-content: center;
+  padding: 0;
+  width: 40px;
+  min-height: 38px;
+  margin-inline: auto;
+}
+.ex-nav[data-rail] .mantine-NavLink-section[data-position='left'] {
+  margin: 0;
+}
+.ex-nav[data-rail] .mantine-NavLink-body {
+  display: none;
+}
+.ex-nav[data-rail][data-active]::before {
+  left: -12px;
+}
+
+.ex-project-switch {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 6px 8px;
+  border: 1px solid var(--ex-border);
+  border-radius: var(--ex-radius-md);
+  background: var(--ex-surface);
+  text-align: left;
+  transition: border-color var(--ex-dur) var(--ex-ease);
+}
+.ex-project-switch:hover {
+  border-color: var(--ex-border-strong);
+}
+.ex-project-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--ex-radius-sm);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+/* Project summary card (Overview, project pickers). */
+.ex-project-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  height: 100%;
+  padding: 16px;
+  background: var(--ex-surface);
+  border: 1px solid var(--ex-border);
+  border-radius: var(--ex-radius-lg);
+  box-shadow: var(--ex-shadow-card);
+  transition: border-color 120ms ease, background-color 120ms ease;
+}
+.ex-project-card:hover {
+  border-color: var(--ex-border-strong);
+  background: var(--ex-surface-elevated);
+}
+.ex-project-card:focus-visible {
+  outline: 2px solid var(--ex-focus);
+  outline-offset: 2px;
+}
+.ex-project-card__stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--ex-border);
+}
+.ex-project-card__value {
+  font-size: 18px;
+  font-weight: 650;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+.ex-project-card__label {
+  font-size: var(--mantine-font-size-xs);
+  color: var(--ex-muted);
+  line-height: 1.3;
+}
+
+/* Divided list rows inside a section card. */
+.ex-list__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-block: 10px;
+  border-top: 1px solid var(--ex-border);
+}
+.ex-list__row:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+.ex-list__row:last-child {
+  padding-bottom: 0;
+}
+.ex-list__row[data-dense] {
+  padding-block: 6px;
+}
+
+.ex-page {
+  max-width: var(--ex-content-max);
+  margin-inline: auto;
+}
+
+/* ---------- Page building blocks ---------- */
+.ex-page-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px 24px;
+  margin-bottom: 24px;
+}
+.ex-page-header__text {
+  min-width: 0;
+  flex: 1 1 360px;
+}
+.ex-page-header__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.ex-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+  font-size: var(--mantine-font-size-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ex-muted);
+}
+
+.ex-section {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--ex-surface);
+  border: 1px solid var(--ex-border);
+  border-radius: var(--ex-radius-lg);
+  box-shadow: var(--ex-shadow-card);
+}
+.ex-section__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px 0;
+}
+.ex-section__title {
+  font-size: var(--mantine-font-size-md);
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--ex-fg);
+  margin: 0;
+}
+.ex-section__desc {
+  font-size: var(--mantine-font-size-xs);
+  color: var(--ex-muted);
+  margin-top: 2px;
+}
+.ex-section__body {
+  flex: 1;
+  min-width: 0;
+  padding: 12px 16px 16px;
+}
+
+.ex-stat {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 8px;
+  height: 100%;
+  min-height: 112px;
+  padding: 14px 16px;
+  background: var(--ex-surface);
+  border: 1px solid var(--ex-border);
+  border-radius: var(--ex-radius-lg);
+  box-shadow: var(--ex-shadow-card);
+  min-width: 0;
+}
+.ex-stat__label {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: var(--mantine-font-size-sm);
+  font-weight: 500;
+  color: var(--ex-fg-secondary);
+  line-height: 1.35;
+}
+/* Labels wrap to two lines in narrow cards instead of truncating to "Active ses…". */
+.ex-stat__label-text {
+  min-width: 0;
+  padding-top: 4px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.ex-stat__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--ex-radius-sm);
+  background: var(--ex-subtle);
+  color: var(--ex-muted);
+}
+.ex-stat__value {
+  font-size: 28px;
+  line-height: 1.1;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ex-fg);
+}
+.ex-stat__hint {
+  font-size: var(--mantine-font-size-xs);
+  color: var(--ex-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ex-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 4px;
+  padding: 40px 16px;
+}
+.ex-empty[data-compact] {
+  flex-direction: row;
+  justify-content: flex-start;
+  text-align: left;
+  gap: 12px;
+  padding: 12px 0 4px;
+}
+.ex-empty__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  margin-bottom: 8px;
+  border-radius: var(--ex-radius-lg);
+  background: var(--ex-subtle);
+  border: 1px solid var(--ex-border);
+  color: var(--ex-muted);
+}
+.ex-empty[data-compact] .ex-empty__icon {
+  width: 32px;
+  height: 32px;
+  margin: 0;
+  border-radius: var(--ex-radius-md);
+}
+
+.ex-legend-dot {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+/* ---------- Utilities ---------- */
+.ex-num {
+  font-variant-numeric: tabular-nums;
 }
 
 .ex-link {
@@ -20,17 +626,18 @@ a {
 }
 .ex-link:hover {
   text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .ex-key {
   font-family: var(--mantine-font-family-monospace);
-  font-size: 0.8em;
+  font-size: 0.82em;
   color: var(--ex-muted);
   white-space: nowrap;
 }
 
 .ex-rich {
-  line-height: 1.55;
+  line-height: 1.6;
   word-break: break-word;
 }
 .ex-rich p {
@@ -43,8 +650,9 @@ a {
 }
 .ex-rich pre {
   background: var(--ex-subtle);
-  padding: 8px;
-  border-radius: 6px;
+  border: 1px solid var(--ex-border);
+  padding: 8px 10px;
+  border-radius: var(--ex-radius-sm);
   overflow: auto;
 }
 .ex-rich code {
@@ -62,9 +670,10 @@ a {
 }
 
 .ex-timer {
-  font-family: var(--mantine-font-family-monospace);
   font-variant-numeric: tabular-nums;
-  letter-spacing: 0.02em;
+  font-feature-settings: 'tnum' 1, 'ss01' 1;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
 }
 
 .ex-fade-in {
@@ -95,9 +704,13 @@ a {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ex-fade-in,
-  .ex-pulse {
-    animation: none;
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 
@@ -110,6 +723,7 @@ a {
   }
   .mantine-AppShell-main {
     padding: 0 !important;
+    background: white !important;
   }
   body {
     background: white !important;

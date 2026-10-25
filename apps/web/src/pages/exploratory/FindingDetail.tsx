@@ -265,23 +265,15 @@ function FindingView({ finding: f, history, permissions }: { finding: any; histo
               <Stack gap="md">
                 <TextBlock label="Description" value={f.description ? <span className="ex-prewrap">{f.description}</span> : null} />
                 <TextBlock label="Preconditions" value={f.preconditions ? <span className="ex-prewrap">{f.preconditions}</span> : null} />
-                <Grid gap="md">
-                  <Grid.Col span={{ base: 12, sm: 6 }}>
-                    <TextBlock label="Actual behavior" value={f.actual ? <span className="ex-prewrap">{f.actual}</span> : null} />
-                  </Grid.Col>
-                  <Grid.Col span={{ base: 12, sm: 6 }}>
-                    <TextBlock label="Expected behavior" value={f.expected ? <span className="ex-prewrap">{f.expected}</span> : null} />
-                  </Grid.Col>
-                </Grid>
+                <div className="ex-field-pair">
+                  <TextBlock label="Actual behavior" value={f.actual ? <span className="ex-prewrap">{f.actual}</span> : null} />
+                  <TextBlock label="Expected behavior" value={f.expected ? <span className="ex-prewrap">{f.expected}</span> : null} />
+                </div>
                 <TextBlock label="Steps to reproduce" value={f.reproSteps ? <span className="ex-prewrap">{f.reproSteps}</span> : null} />
-                <Grid gap="md">
-                  <Grid.Col span={{ base: 12, sm: 6 }}>
-                    <TextBlock label="Environment" value={f.environment ? <span className="ex-prewrap">{f.environment}</span> : null} />
-                  </Grid.Col>
-                  <Grid.Col span={{ base: 12, sm: 6 }}>
-                    <TextBlock label="Browser / client" value={f.browser ? <span className="ex-prewrap">{f.browser}</span> : null} />
-                  </Grid.Col>
-                </Grid>
+                <div className="ex-field-pair">
+                  <TextBlock label="Environment" value={f.environment ? <span className="ex-prewrap">{f.environment}</span> : null} />
+                  <TextBlock label="Browser / client" value={f.browser ? <span className="ex-prewrap">{f.browser}</span> : null} />
+                </div>
                 <TextBlock label="Follow-up actions" value={f.followUp ? <span className="ex-prewrap">{f.followUp}</span> : null} />
                 <TextBlock label="Resolution" value={f.resolution ? <span className="ex-prewrap">{f.resolution}</span> : null} />
                 {!f.description && !f.actual && !f.expected && !f.reproSteps && !f.environment && !f.preconditions && !f.browser && (

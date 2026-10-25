@@ -1,13 +1,13 @@
 import { useMemo } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router';
 import { useQueries, useQuery } from '@tanstack/react-query';
-import { Alert, Anchor, Badge, Code, Grid, Group, Paper, ScrollArea, Select, SimpleGrid, Stack, Table, Text, Title, Tooltip } from '@mantine/core';
+import { Alert, Anchor, Badge, Code, Grid, Group, Paper, ScrollArea, Select, Box, Stack, Table, Text, Title, Tooltip } from '@mantine/core';
 import { LineChart } from '@mantine/charts';
 import { IconRefreshAlert } from '@tabler/icons-react';
 import { api, p } from '../../lib/api';
 import { fmtDateTime, fromNow } from '../../lib/format';
 import { useProject } from '../../lib/project';
-import { IssueStatusBadge, PageHeader, QueryState, SeverityBadge, StatCard, StatusPill } from '../../components/ui';
+import { IssueStatusBadge, PageHeader, QueryState, SeverityBadge, StatCard, StatGrid, StatusPill } from '../../components/ui';
 import { FlakyBadge, HistoryStrip, fmtMs } from '../../components/AutomationBits';
 
 export default function AutomationTest() {
@@ -52,12 +52,12 @@ export default function AutomationTest() {
               subtitle={[d.test.suite, d.test.file].filter(Boolean).join(' · ') || undefined}
             />
 
-            <SimpleGrid cols={{ base: 2, md: 4 }} spacing="sm" mb="md">
+            <Box mb="md"><StatGrid max={4}>
               <StatCard label="Pass rate" value={passRate == null ? '—' : `${passRate}%`} hint={`${passed} of ${executed.length} executed results shown (skips excluded)`} color={passRate == null ? undefined : passRate >= 95 ? 'green' : passRate >= 80 ? 'yellow' : 'red'} />
               <StatCard label="Results" value={results.length} hint={d.results.length >= 50 ? 'Latest 50 results' : 'All recorded results'} />
               <StatCard label="Avg duration" value={fmtMs(avg)} hint={durations.length ? `min ${fmtMs(Math.min(...durations))} · max ${fmtMs(Math.max(...durations))}` : undefined} />
               <StatCard label="Flake score" value={`${Math.round(d.flaky.score * 100)}%`} hint={`${d.flaky.flips} flips · ${d.flaky.passedOnRetry} passed on retry (last 10)`} color={d.flaky.flaky ? 'grape' : undefined} />
-            </SimpleGrid>
+            </StatGrid></Box>
 
             <Paper withBorder p="md" mb="md">
               <Group justify="space-between" mb="sm">
@@ -222,7 +222,7 @@ export default function AutomationTest() {
                             </Text>
                           </Tooltip>
                         </Table.Td>
-                        <Table.Td>
+                        <Table.Td className="ex-nowrap">
                           <Tooltip label={fmtDateTime(r.createdAt)}>
                             <Text size="sm">{fromNow(r.createdAt)}</Text>
                           </Tooltip>

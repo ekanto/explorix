@@ -6,7 +6,7 @@ import { IconArrowRight, IconArrowsExchange, IconInfoCircle } from '@tabler/icon
 import { api, p } from '../../lib/api';
 import { fmtDateTime } from '../../lib/format';
 import { useProject } from '../../lib/project';
-import { EmptyState, PageHeader, QueryState, ResultBadge, StatCard } from '../../components/ui';
+import { EmptyState, PageHeader, QueryState, ResultBadge, StatCard, StatGrid } from '../../components/ui';
 import { RunResultBar, fmtMs } from '../../components/AutomationBits';
 
 const CATEGORIES = [
@@ -96,7 +96,7 @@ export default function AutomationCompare() {
                     <Paper key={label} withBorder p="sm">
                       <Group justify="space-between" wrap="nowrap">
                         <div style={{ minWidth: 0 }}>
-                          <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
+                          <Text className="ex-label">
                             {label}
                           </Text>
                           <Anchor component={Link} to={`/projects/${pid}/automation/runs/${r.id}`} size="sm" lineClamp={1}>
@@ -112,7 +112,7 @@ export default function AutomationCompare() {
                   ))}
                 </SimpleGrid>
 
-                <SimpleGrid cols={{ base: 2, sm: 4, lg: 7 }} spacing="sm">
+                <StatGrid max={7}>
                   {CATEGORIES.map((c) => (
                     <StatCard key={c.key} label={c.label} value={d[c.key].length} hint={c.hint} color={d[c.key].length ? c.color : undefined} />
                   ))}
@@ -123,7 +123,7 @@ export default function AutomationCompare() {
                     hint={`${fmtMs(d.base.durationMs)} → ${fmtMs(d.head.durationMs)}`}
                     color={d.durationDeltaMs > 0 ? 'orange' : 'green'}
                   />
-                </SimpleGrid>
+                </StatGrid>
 
                 <Paper withBorder>
                   <Tabs value={tab} onChange={(v) => set({ tab: v === 'newFailures' ? null : v })}>

@@ -445,6 +445,7 @@ function CharterEditor({ charter, template, templateError }: { charter?: any; te
                   <Select label="Risk level" data={options(RISK)} value={v.riskLevel} onChange={(x) => set('riskLevel', x ?? 'MEDIUM')} allowDeselect={false} />
                   <NumberInput
                     label="Timebox (min)"
+                    description="Per session"
                     min={5}
                     max={480}
                     step={15}
@@ -671,7 +672,7 @@ function AssistantPanel({
         <Title order={5}>Charter assistant</Title>
       </Group>
 
-      <Text size="xs" fw={700} c="dimmed" tt="uppercase" mb={4}>
+      <Text className="ex-label" mb={4}>
         Quality check
       </Text>
       {!lint.data ? (
@@ -709,7 +710,7 @@ function AssistantPanel({
       )}
 
       <Divider my="md" />
-      <Text size="xs" fw={700} c="dimmed" tt="uppercase" mb={6}>
+      <Text className="ex-label" mb={6}>
         Suggestions (you choose what to add)
       </Text>
       <Group gap="xs" mb="xs">

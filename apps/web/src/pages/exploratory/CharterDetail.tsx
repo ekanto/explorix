@@ -209,7 +209,7 @@ function CharterView({ charter: c, permissions }: { charter: any; permissions: {
         <Grid.Col span={{ base: 12, lg: 8 }}>
           <Stack gap="md">
             <Paper withBorder p="md">
-              <Text size="xs" fw={600} c="dimmed" tt="uppercase" mb={4} style={{ letterSpacing: '0.03em' }}>
+              <Text className="ex-label" mb={4}>
                 Mission
               </Text>
               <Text size="lg" className="ex-prewrap" mb="md">
@@ -410,7 +410,7 @@ function CharterView({ charter: c, permissions }: { charter: any; permissions: {
                                         </Text>
                                       )}
                                     </Table.Td>
-                                    <Table.Td>
+                                    <Table.Td className="ex-nowrap">
                                       <Text size="sm" c="dimmed">
                                         {fromNow(f.createdAt)}
                                       </Text>

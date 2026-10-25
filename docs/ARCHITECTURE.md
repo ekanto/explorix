@@ -182,7 +182,8 @@ pages/               Overview, My Work, Projects, project dashboard; exploratory
                      templates, sessions, workbench, findings, issues); testing/* (test cases,
                      runs, requirements); automation/*; admin/* (reports, activity,
                      integrations, project settings, organization admin)
-theme.ts             Explorix design tokens (brand palette, radius, typography, status colors)
+theme.ts             Explorix design tokens (brand palette, radius, typography, status colors); see docs/DESIGN.md
+styles.css           Semantic light/dark tokens (--ex-*) and shared layout classes (.ex-*)
 ```
 
 The **Workbench** (`pages/exploratory/Workbench.tsx`) is the signature screen. It contains:

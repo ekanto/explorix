@@ -17,7 +17,7 @@ export function fmtMs(ms: number | null | undefined): string {
 export const categoryColor = (c: string | null | undefined) => (c ? RESULT_CATEGORY[c]?.color ?? 'gray' : 'gray');
 
 /** Stacked passed / failed / skipped / other bar for an automation run. */
-export function RunResultBar({ passed, failed, skipped, other = 0, total, w = 140 }: { passed: number; failed: number; skipped: number; other?: number; total: number; w?: number }) {
+export function RunResultBar({ passed, failed, skipped, other = 0, total, w = 140 }: { passed: number; failed: number; skipped: number; other?: number; total: number; w?: number | string }) {
   const pctOf = (n: number) => (total ? (n / total) * 100 : 0);
   return (
     <Box w={w}>

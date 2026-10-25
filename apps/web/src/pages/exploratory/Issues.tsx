@@ -232,7 +232,7 @@ export default function Issues() {
                               </Text>
                             )}
                           </Table.Td>
-                          <Table.Td>
+                          <Table.Td className="ex-nowrap">
                             <Tooltip label={fmtDateTime(i.updatedAt)}>
                               <Text size="sm" c="dimmed">
                                 {fromNow(i.updatedAt)}

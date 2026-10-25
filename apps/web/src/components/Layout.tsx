@@ -4,8 +4,8 @@ import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import {
   ActionIcon,
   AppShell,
-  Badge,
   Box,
+  Collapse,
   Burger,
   Divider,
   Group,
@@ -16,7 +16,6 @@ import {
   NavLink,
   Popover,
   ScrollArea,
-  Select,
   Stack,
   Table,
   Text,
@@ -25,15 +24,19 @@ import {
   useComputedColorScheme,
   useMantineColorScheme,
 } from '@mantine/core';
-import { useDebouncedValue, useDisclosure, useHotkeys } from '@mantine/hooks';
+import { useDebouncedValue, useDisclosure, useHotkeys, useMediaQuery } from '@mantine/hooks';
 import { Spotlight, spotlight, type SpotlightActionData } from '@mantine/spotlight';
 import {
   IconAdjustments,
+  IconCheck,
+  IconChevronDown,
+  IconLayoutSidebarLeftCollapse,
+  IconLayoutSidebarLeftExpand,
+  IconSelector,
   IconBell,
   IconBug,
   IconChartBar,
   IconChecklist,
-  IconCompass,
   IconFileDescription,
   IconFlask,
   IconFolders,
@@ -231,6 +234,7 @@ function GlobalSearch({ projectId }: { projectId?: string }) {
 const SHORTCUTS: [string, string][] = [
   ['Ctrl + K  or  /', 'Search and jump to anything'],
   ['Ctrl + J', 'Switch light / dark theme'],
+  ['Ctrl + B', 'Collapse / expand the sidebar'],
   ['G then M', 'Go to My Work'],
   ...(isDesktop
     ? ([
@@ -261,6 +265,87 @@ function ShortcutsHelp({ opened, onClose }: { opened: boolean; onClose: () => vo
   );
 }
 
+const NAV_COLLAPSED = 'explorix.navCollapsed';
+const NAV_GROUPS = 'explorix.navGroups';
+
+type NavEntry = { to: string; label: string; icon: React.ReactNode; exact?: boolean };
+
+function useStoredState<T>(key: string, initial: T) {
+  const [value, setValue] = useState<T>(() => {
+    try {
+      const raw = localStorage.getItem(key);
+      return raw == null ? initial : (JSON.parse(raw) as T);
+    } catch {
+      return initial;
+    }
+  });
+  useEffect(() => localStorage.setItem(key, JSON.stringify(value)), [key, value]);
+  return [value, setValue] as const;
+}
+
+function ProjectSwitcher({ list, current, rail, onPick }: { list: ProjectLite[]; current?: ProjectLite; rail: boolean; onPick: (id: string) => void }) {
+  const mark = (x?: ProjectLite) => (
+    <span className="ex-project-mark" style={{ background: x?.color ?? 'var(--mantine-color-gray-6)' }} aria-hidden>
+      {(x?.key ?? '?').slice(0, 3)}
+    </span>
+  );
+  const active = list.filter((x) => !x.archivedAt);
+  const archived = list.filter((x) => x.archivedAt);
+  return (
+    <Menu position={rail ? 'right-start' : 'bottom-start'} width={280} offset={6}>
+      <Menu.Target>
+        {rail ? (
+          <Tooltip label={current ? `${current.key} · ${current.name}` : 'Select a project'} position="right">
+            <UnstyledButton aria-label="Current project" style={{ display: 'flex', justifyContent: 'center', width: '100%', padding: '4px 0' }}>
+              {mark(current)}
+            </UnstyledButton>
+          </Tooltip>
+        ) : (
+          <UnstyledButton className="ex-project-switch" aria-label="Current project">
+            {mark(current)}
+            <Box style={{ minWidth: 0, flex: 1 }}>
+              <Text size="xs" c="dimmed" lh={1.3}>
+                Project
+              </Text>
+              <Text size="sm" fw={600} truncate lh={1.35}>
+                {current ? current.name : 'Select a project'}
+              </Text>
+            </Box>
+            <IconSelector size={16} color="var(--ex-muted)" />
+          </UnstyledButton>
+        )}
+      </Menu.Target>
+      <Menu.Dropdown>
+        <Menu.Label>Switch project</Menu.Label>
+        <ScrollArea.Autosize mah={360}>
+          {active.map((x) => (
+            <Menu.Item key={x.id} leftSection={mark(x)} rightSection={x.id === current?.id ? <IconCheck size={16} /> : null} onClick={() => onPick(x.id)}>
+              <Text size="sm" fw={500} truncate>
+                {x.name}
+              </Text>
+              <Text size="xs" c="dimmed">
+                {x.key}
+              </Text>
+            </Menu.Item>
+          ))}
+          {archived.length > 0 && <Menu.Label>Archived</Menu.Label>}
+          {archived.map((x) => (
+            <Menu.Item key={x.id} leftSection={mark(x)} onClick={() => onPick(x.id)} rightSection={x.id === current?.id ? <IconCheck size={16} /> : null}>
+              <Text size="sm" c="dimmed" truncate>
+                {x.name}
+              </Text>
+            </Menu.Item>
+          ))}
+        </ScrollArea.Autosize>
+        <Menu.Divider />
+        <Menu.Item component={Link} to="/projects" leftSection={<IconFolders size={16} />}>
+          All projects
+        </Menu.Item>
+      </Menu.Dropdown>
+    </Menu>
+  );
+}
+
 export function AppLayout() {
   const { user, org, logout, isOrgAdmin } = useAuth();
   const navigate = useNavigate();
@@ -270,6 +355,8 @@ export function AppLayout() {
   const inWorkbench = !!useMatch('/projects/:projectId/sessions/:id');
   const [opened, { toggle, close }] = useDisclosure();
   const [helpOpen, setHelpOpen] = useState(false);
+  const [collapsed, setCollapsed] = useStoredState(NAV_COLLAPSED, false);
+  const [closedGroups, setClosedGroups] = useStoredState<string[]>(NAV_GROUPS, []);
   const { setColorScheme } = useMantineColorScheme();
   const scheme = useComputedColorScheme('light');
   const projects = useProjects();
@@ -299,9 +386,18 @@ export function AppLayout() {
   const list = projects.data?.projects ?? [];
   const pid = urlPid ?? (list.some((x) => x.id === lastPid) ? lastPid : list.find((x) => !x.archivedAt)?.id) ?? undefined;
   const current = list.find((x) => x.id === pid);
+  // The mobile drawer always shows full labels; the icon rail applies from the `sm` breakpoint up.
+  // Between `sm` and `md` the content area is too narrow for a full sidebar, so the rail is the
+  // default there; the toggle expands it for this window size without changing the saved preference.
+  const midWidth = useMediaQuery('(min-width: 48em) and (max-width: 61.99em)');
+  const [midExpanded, setMidExpanded] = useState(false);
+  const isCollapsed = midWidth ? !midExpanded : collapsed;
+  const toggleRail = () => (midWidth ? setMidExpanded((v) => !v) : setCollapsed((v) => !v));
+  const rail = isCollapsed && !opened;
 
   useHotkeys([
     ['mod+J', () => setColorScheme(scheme === 'dark' ? 'light' : 'dark')],
+    ['mod+B', toggleRail],
     ['g m', () => navigate('/my-work')],
     ['shift+/', () => !inWorkbench && setHelpOpen(true)],
   ]);
@@ -309,65 +405,125 @@ export function AppLayout() {
   const path = location.pathname;
   const base = pid ? `/projects/${pid}` : '';
   const isActive = (to: string, exact = false) => (exact ? path === to : path === to || path.startsWith(`${to}/`));
-  const item = (to: string, label: string, icon: React.ReactNode, exact = false) => (
-    <NavLink key={to} component={Link} to={to} label={label} leftSection={icon} active={isActive(to, exact)} variant="light" style={{ borderRadius: 6 }} />
+  const item = ({ to, label, icon, exact }: NavEntry) => (
+    <Tooltip key={to} label={label} position="right" disabled={!rail} openDelay={150}>
+      <NavLink
+        component={Link}
+        to={to}
+        label={label}
+        aria-label={rail ? label : undefined}
+        leftSection={icon}
+        active={isActive(to, exact)}
+        variant="subtle"
+        className="ex-nav"
+        data-rail={rail || undefined}
+      />
+    </Tooltip>
   );
+  const group = (id: string, title: string, entries: NavEntry[]) => {
+    const isOpen = rail || !closedGroups.includes(id);
+    return (
+      <Box key={id} role="group" aria-label={title}>
+        {rail ? (
+          <Divider my={8} mx={8} />
+        ) : (
+          <UnstyledButton
+            className="ex-nav-section"
+            aria-expanded={isOpen}
+            onClick={() => setClosedGroups((g) => (g.includes(id) ? g.filter((x) => x !== id) : [...g, id]))}
+          >
+            <span>{title}</span>
+            <IconChevronDown size={14} style={{ transform: isOpen ? undefined : 'rotate(-90deg)', transition: 'transform 150ms' }} aria-hidden />
+          </UnstyledButton>
+        )}
+        <Collapse expanded={isOpen} transitionDuration={150}>
+          <Stack gap={2} pt={rail ? 0 : 2}>
+            {entries.map(item)}
+          </Stack>
+        </Collapse>
+      </Box>
+    );
+  };
 
+  const I = 18;
   return (
-    <AppShell header={{ height: 56 }} navbar={{ width: 248, breakpoint: 'sm', collapsed: { mobile: !opened } }} padding="lg">
+    <AppShell
+      header={{ height: 52 }}
+      navbar={{ width: rail ? 68 : 256, breakpoint: 'sm', collapsed: { mobile: !opened } }}
+      padding={{ base: 'md', md: 'lg' }}
+      transitionDuration={150}
+    >
       <AppShell.Header>
-        <Group h="100%" px="md" justify="space-between" wrap="nowrap">
-          <Group gap="sm" wrap="nowrap">
+        <Group h="100%" px="sm" justify="space-between" wrap="nowrap" gap="sm">
+          <Group gap="xs" wrap="nowrap" style={{ minWidth: 0, flex: 1 }}>
             <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" aria-label="Toggle navigation" />
-            <UnstyledButton component={Link} to="/" aria-label="Explorix home">
-              <Logo size={26} />
+            <Tooltip label={`${isCollapsed ? 'Expand' : 'Collapse'} sidebar (Ctrl+B)`}>
+              <ActionIcon variant="subtle" color="gray" size="lg" visibleFrom="sm" onClick={toggleRail} aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
+                {isCollapsed ? <IconLayoutSidebarLeftExpand size={20} /> : <IconLayoutSidebarLeftCollapse size={20} />}
+              </ActionIcon>
+            </Tooltip>
+            <UnstyledButton component={Link} to="/" aria-label="Explorix home" px={4}>
+              <Logo size={24} />
             </UnstyledButton>
             {org && (
-              <Badge variant="outline" color="gray" visibleFrom="md" radius="sm">
-                {org.name}
-              </Badge>
+              <Group gap={6} wrap="nowrap" visibleFrom="md" style={{ minWidth: 0 }}>
+                <Text c="dimmed" aria-hidden>
+                  /
+                </Text>
+                <Text size="sm" fw={500} c="dimmed" truncate maw={180}>
+                  {org.name}
+                </Text>
+                {current && urlPid && (
+                  <>
+                    <Text c="dimmed" aria-hidden>
+                      /
+                    </Text>
+                    <Text size="sm" fw={600} truncate maw={220} component={Link} to={base}>
+                      {current.name}
+                    </Text>
+                  </>
+                )}
+              </Group>
             )}
           </Group>
-          <UnstyledButton
-            onClick={() => spotlight.open()}
-            visibleFrom="sm"
-            style={{ border: '1px solid var(--ex-border)', borderRadius: 8, padding: '6px 10px', width: 360, maxWidth: '40vw' }}
-            aria-label="Search"
-          >
-            <Group justify="space-between" wrap="nowrap">
-              <Group gap={8} wrap="nowrap">
-                <IconSearch size={16} />
-                <Text size="sm" c="dimmed" truncate>
-                  Search or jump to…
-                </Text>
-              </Group>
-              <Kbd size="xs">Ctrl K</Kbd>
-            </Group>
+          <UnstyledButton onClick={() => spotlight.open()} visibleFrom="sm" className="ex-header-search" aria-label="Search">
+            <IconSearch size={16} />
+            <Text size="sm" c="dimmed" truncate style={{ flex: 1 }}>
+              Search or jump to…
+            </Text>
+            <Kbd size="xs">Ctrl K</Kbd>
           </UnstyledButton>
-          <Group gap={6} wrap="nowrap">
+          <Group gap={4} wrap="nowrap" justify="flex-end" style={{ flex: 1 }}>
             <ActionIcon variant="subtle" color="gray" size="lg" hiddenFrom="sm" onClick={() => spotlight.open()} aria-label="Search">
               <IconSearch size={20} />
             </ActionIcon>
+            <Tooltip label="Keyboard shortcuts (?)">
+              <ActionIcon variant="subtle" color="gray" size="lg" visibleFrom="md" onClick={() => setHelpOpen(true)} aria-label="Keyboard shortcuts">
+                <IconKeyboard size={20} />
+              </ActionIcon>
+            </Tooltip>
             <Tooltip label={`Switch to ${scheme === 'dark' ? 'light' : 'dark'} theme (Ctrl+J)`}>
               <ActionIcon variant="subtle" color="gray" size="lg" onClick={() => setColorScheme(scheme === 'dark' ? 'light' : 'dark')} aria-label="Toggle color scheme">
                 {scheme === 'dark' ? <IconSun size={20} /> : <IconMoon size={20} />}
               </ActionIcon>
             </Tooltip>
             <NotificationsBell />
-            <Menu position="bottom-end" width={220}>
+            <Menu position="bottom-end" width={240}>
               <Menu.Target>
-                <UnstyledButton aria-label="Account menu">
+                <UnstyledButton aria-label="Account menu" ml={4} style={{ borderRadius: 999 }}>
                   <UserAvatar user={user} size={30} />
                 </UnstyledButton>
               </Menu.Target>
               <Menu.Dropdown>
-                <Menu.Label>
-                  {user?.name}
-                  <br />
-                  <Text span size="xs" c="dimmed">
+                <Box px="sm" py={8}>
+                  <Text size="sm" fw={600} truncate>
+                    {user?.name}
+                  </Text>
+                  <Text size="xs" c="dimmed" truncate>
                     {user?.email}
                   </Text>
-                </Menu.Label>
+                </Box>
+                <Menu.Divider />
                 <Menu.Item leftSection={<IconUser size={16} />} component={Link} to="/profile">
                   Profile & preferences
                 </Menu.Item>
@@ -404,69 +560,62 @@ export function AppLayout() {
         </Group>
       </AppShell.Header>
 
-      <AppShell.Navbar p="sm">
+      <AppShell.Navbar px={rail ? 6 : 'sm'} pt="sm" pb={6} aria-label="Main navigation">
         <AppShell.Section>
           <Stack gap={2}>
-            {item('/', 'Overview', <IconHome size={18} />, true)}
-            {item('/my-work', 'My Work', <IconUserCheck size={18} />)}
-            {item('/projects', 'Projects', <IconFolders size={18} />, true)}
+            {item({ to: '/', label: 'Overview', icon: <IconHome size={I} />, exact: true })}
+            {item({ to: '/my-work', label: 'My Work', icon: <IconUserCheck size={I} /> })}
+            {item({ to: '/projects', label: 'Projects', icon: <IconFolders size={I} />, exact: true })}
           </Stack>
-          <Divider my="sm" />
-          <Select
-            size="xs"
-            aria-label="Current project"
-            placeholder="Select a project"
-            data={list.map((x) => ({ value: x.id, label: `${x.key} · ${x.name}${x.archivedAt ? ' (archived)' : ''}` }))}
-            value={pid ?? null}
-            onChange={(v) => v && navigate(`/projects/${v}`)}
-            allowDeselect={false}
-            leftSection={current ? <Box w={10} h={10} style={{ borderRadius: 3, background: current.color }} /> : undefined}
-            mb={6}
-          />
+          <Box mt="sm" mb={4}>
+            <ProjectSwitcher list={list} current={current} rail={rail} onPick={(v) => navigate(`/projects/${v}`)} />
+          </Box>
         </AppShell.Section>
-        <AppShell.Section grow component={ScrollArea} type="scroll">
+        <AppShell.Section grow component={ScrollArea} type="hover" scrollbarSize={6} mx={rail ? -6 : -12} px={rail ? 6 : 12}>
           {pid && (
-            <Stack gap={2}>
-              {item(base, 'Project dashboard', <IconLayoutDashboard size={18} />, true)}
-              <NavLink
-                label="Exploratory Testing"
-                leftSection={<IconCompass size={18} />}
-                defaultOpened
-                childrenOffset={14}
-                style={{ borderRadius: 6 }}
-                active={false}
-              >
-                {item(`${base}/charters`, 'Charters', <IconTargetArrow size={16} />)}
-                {item(`${base}/sessions`, 'Sessions', <IconPlayerPlay size={16} />)}
-                {item(`${base}/templates`, 'Session Templates', <IconTemplate size={16} />)}
-                {item(`${base}/findings`, 'Findings', <IconBulb size={16} />)}
-              </NavLink>
-              {item(`${base}/test-cases`, 'Test Cases', <IconChecklist size={18} />)}
-              {item(`${base}/test-runs`, 'Test Runs', <IconListCheck size={18} />)}
-              {item(`${base}/automation`, 'Automation', <IconRobot size={18} />)}
-              {item(`${base}/issues`, 'Issues', <IconBug size={18} />)}
-              {item(`${base}/requirements`, 'Requirements', <IconFlask size={18} />)}
-              {item(`${base}/reports`, 'Reports', <IconChartBar size={18} />, true)}
-              {item(`${base}/reports/new`, 'Report builder', <IconReportAnalytics size={18} />)}
-              {item(`${base}/activity`, 'Activity', <IconTimeline size={18} />)}
-              {item(`${base}/integrations`, 'Integrations', <IconPlugConnected size={18} />)}
-              {item(`${base}/settings`, 'Project settings', <IconAdjustments size={18} />)}
-            </Stack>
+            <Box pb="xs">
+              <Stack gap={2} mt={4}>
+                {item({ to: base, label: 'Project dashboard', icon: <IconLayoutDashboard size={I} />, exact: true })}
+              </Stack>
+              {group('explore', 'Exploratory testing', [
+                { to: `${base}/charters`, label: 'Charters', icon: <IconTargetArrow size={I} /> },
+                { to: `${base}/sessions`, label: 'Sessions', icon: <IconPlayerPlay size={I} /> },
+                { to: `${base}/templates`, label: 'Session Templates', icon: <IconTemplate size={I} /> },
+                { to: `${base}/findings`, label: 'Findings', icon: <IconBulb size={I} /> },
+              ])}
+              {group('quality', 'Test management', [
+                { to: `${base}/test-cases`, label: 'Test Cases', icon: <IconChecklist size={I} /> },
+                { to: `${base}/test-runs`, label: 'Test Runs', icon: <IconListCheck size={I} /> },
+                { to: `${base}/automation`, label: 'Automation', icon: <IconRobot size={I} /> },
+                { to: `${base}/issues`, label: 'Issues', icon: <IconBug size={I} /> },
+                { to: `${base}/requirements`, label: 'Requirements', icon: <IconFlask size={I} /> },
+              ])}
+              {group('insights', 'Insights', [
+                { to: `${base}/reports`, label: 'Reports', icon: <IconChartBar size={I} />, exact: true },
+                { to: `${base}/reports/new`, label: 'Report builder', icon: <IconReportAnalytics size={I} /> },
+                { to: `${base}/activity`, label: 'Activity', icon: <IconTimeline size={I} /> },
+              ])}
+              {group('project', 'Project', [
+                { to: `${base}/integrations`, label: 'Integrations', icon: <IconPlugConnected size={I} /> },
+                { to: `${base}/settings`, label: 'Project settings', icon: <IconAdjustments size={I} /> },
+              ])}
+            </Box>
           )}
         </AppShell.Section>
         {(isOrgAdmin || isDesktop) && (
-          <AppShell.Section>
-            <Divider my="xs" />
-            {isOrgAdmin && item('/admin', 'Administration', <IconSettings size={18} />)}
-            {isDesktop && item('/settings/desktop', 'Desktop settings', <IconDeviceDesktop size={18} />)}
+          <AppShell.Section pt={6} style={{ borderTop: '1px solid var(--ex-border)' }}>
+            <Stack gap={2}>
+              {isOrgAdmin && item({ to: '/admin', label: 'Administration', icon: <IconSettings size={I} /> })}
+              {isDesktop && item({ to: '/settings/desktop', label: 'Desktop settings', icon: <IconDeviceDesktop size={I} /> })}
+            </Stack>
           </AppShell.Section>
         )}
       </AppShell.Navbar>
 
       <AppShell.Main>
-        <Box maw={1440} mx="auto">
+        <div className="ex-page">
           <Outlet />
-        </Box>
+        </div>
       </AppShell.Main>
       <GlobalSearch projectId={pid} />
       <ShortcutsHelp opened={helpOpen} onClose={() => setHelpOpen(false)} />

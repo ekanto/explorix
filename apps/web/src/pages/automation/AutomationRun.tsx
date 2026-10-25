@@ -17,7 +17,6 @@ import {
   ScrollArea,
   SegmentedControl,
   Select,
-  SimpleGrid,
   Stack,
   Table,
   Text,
@@ -42,7 +41,7 @@ import { fmtDateTime } from '../../lib/format';
 import { RESULT_CATEGORY } from '../../lib/constants';
 import { useProject } from '../../lib/project';
 import { Attachments } from '../../components/Attachments';
-import { EmptyState, IssueStatusBadge, PageHeader, QueryState, StatCard, StatusPill, toastError, toastOk } from '../../components/ui';
+import { EmptyState, IssueStatusBadge, PageHeader, QueryState, StatCard, StatGrid, StatusPill, toastError, toastOk } from '../../components/ui';
 import { FlakyBadge, RunResultBar, RunStatusBadge, fmtMs } from '../../components/AutomationBits';
 
 const CATEGORY_ORDER = ['FAILED', 'BLOCKED', 'RETEST', 'SKIPPED', 'UNTESTED', 'PASSED'];
@@ -157,12 +156,12 @@ export default function AutomationRun() {
 
             <Grid gap="md" mb="md">
               <Grid.Col span={{ base: 12, lg: 7 }}>
-                <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="sm">
+                <StatGrid max={4}>
                   <StatCard label="Pass rate" value={run.passRate == null ? '—' : `${run.passRate}%`} hint="passed ÷ (total − skipped)" color={run.passRate == null ? undefined : run.passRate >= 95 ? 'green' : run.passRate >= 80 ? 'yellow' : 'red'} />
                   <StatCard label="Failed" value={run.failedCount} color={run.failedCount ? 'red' : undefined} />
                   <StatCard label="Passed" value={run.passedCount} color="green" />
                   <StatCard label="Skipped / other" value={`${run.skippedCount} / ${run.otherCount}`} />
-                </SimpleGrid>
+                </StatGrid>
                 <Paper withBorder p="sm" mt="sm">
                   <Group justify="space-between">
                     <Text size="sm" fw={600}>
@@ -171,7 +170,7 @@ export default function AutomationRun() {
                     {flakyCount > 0 && <Badge color="grape" variant="light">{flakyCount} flaky in this view</Badge>}
                   </Group>
                   <Box mt={6}>
-                    <RunResultBar passed={run.passedCount} failed={run.failedCount} skipped={run.skippedCount} other={run.otherCount} total={run.totalCount} w={520} />
+                    <RunResultBar passed={run.passedCount} failed={run.failedCount} skipped={run.skippedCount} other={run.otherCount} total={run.totalCount} w="100%" />
                   </Box>
                 </Paper>
               </Grid.Col>
@@ -213,7 +212,7 @@ export default function AutomationRun() {
                     Status
                   </Text>
                   <Chip.Group multiple value={categories} onChange={(v) => set({ status: v.length ? v.join(',') : null })}>
-                    <Group gap={6}>
+                    <Group gap={6} h={36} align="center">
                       {['FAILED', 'PASSED', 'SKIPPED', 'BLOCKED', 'RETEST'].map((c) => (
                         <Chip key={c} value={c} size="xs" color={RESULT_CATEGORY[c]?.color}>
                           {RESULT_CATEGORY[c]?.label ?? c}

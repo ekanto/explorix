@@ -1,10 +1,10 @@
 import { Link } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
-import { Badge, Group, Paper, Progress, SimpleGrid, Stack, Table, Tabs, Text } from '@mantine/core';
+import { Badge, Group, Paper, Progress, Stack, Table, Tabs, Text } from '@mantine/core';
 import { IconAlertTriangle, IconBug, IconBulb, IconCalendar, IconChecklist, IconPlayerPlay, IconTargetArrow, IconUserCheck } from '@tabler/icons-react';
 import { api } from '../lib/api';
 import { clock, fmtDate, fromNow, titleCase } from '../lib/format';
-import { ClassificationBadge, EmptyState, IssueStatusBadge, KeyLink, PageHeader, PriorityBadge, QueryState, SessionStatusBadge, SeverityBadge, StatCard, StatusPill, UserLabel } from '../components/ui';
+import { ClassificationBadge, EmptyState, IssueStatusBadge, KeyLink, PageHeader, PriorityBadge, QueryState, SessionStatusBadge, SeverityBadge, StatCard, StatGrid, StatusPill, UserLabel } from '../components/ui';
 
 function Section({ title, count, children }: { title: string; count: number; children: React.ReactNode }) {
   return (
@@ -32,7 +32,7 @@ export default function MyWork() {
       <QueryState query={q}>
         {(d: any) => (
           <Stack gap="lg">
-            <SimpleGrid cols={{ base: 2, sm: 4, lg: 7 }}>
+            <StatGrid max={7}>
               <StatCard label="Active sessions" value={d.counts.activeSessions} icon={<IconPlayerPlay size={16} />} />
               <StatCard label="Charters" value={d.counts.assignedCharters} icon={<IconTargetArrow size={16} />} />
               <StatCard label="Reviews" value={d.counts.reviews} icon={<IconUserCheck size={16} />} color="violet" />
@@ -40,7 +40,7 @@ export default function MyWork() {
               <StatCard label="Issues" value={d.counts.issues} icon={<IconBug size={16} />} color="red" />
               <StatCard label="Tests to run" value={d.counts.testsToRun} icon={<IconChecklist size={16} />} color="cyan" />
               <StatCard label="Overdue" value={d.counts.overdue} icon={<IconAlertTriangle size={16} />} color={d.counts.overdue ? 'red' : 'gray'} />
-            </SimpleGrid>
+            </StatGrid>
 
             {(d.overdue.length > 0 || d.upcoming.length > 0) && (
               <Paper withBorder p="md">
@@ -147,7 +147,7 @@ export default function MyWork() {
                           <Table.Td>
                             <UserLabel user={s.tester} />
                           </Table.Td>
-                          <Table.Td>Finished {fromNow(s.endedAt)}</Table.Td>
+                          <Table.Td className="ex-nowrap">Finished {fromNow(s.endedAt)}</Table.Td>
                         </Table.Tr>
                       ))}
                     </Table.Tbody>
@@ -178,7 +178,7 @@ export default function MyWork() {
                           <Table.Td>
                             <SeverityBadge value={f.severity} size="sm" />
                           </Table.Td>
-                          <Table.Td>{fromNow(f.createdAt)}</Table.Td>
+                          <Table.Td className="ex-nowrap">{fromNow(f.createdAt)}</Table.Td>
                         </Table.Tr>
                       ))}
                     </Table.Tbody>

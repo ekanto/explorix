@@ -1,4 +1,4 @@
-# Explorix 2.0 — feature implementation checklist
+# Explorix 3.0 — feature implementation checklist
 
 Status legend:
 
@@ -129,7 +129,7 @@ Desktop e2e = `apps/desktop/e2e/desktop.spec.ts`, run against the development bu
 | 4 | Architecture | [ARCHITECTURE.md](ARCHITECTURE.md) | ✅ |
 | 5 | Schema and migrations | `apps/server/prisma/schema.prisma`, `apps/server/prisma/migrations/` | ✅ |
 | 6 | Working application | `apps/server`, `apps/web` | ✅ |
-| 7 | Design system | `apps/web/src/theme.ts`, `apps/web/src/components/`, [ARCHITECTURE.md §5](ARCHITECTURE.md) | ✅ |
+| 7 | Design system | `apps/web/src/theme.ts`, `apps/web/src/styles.css`, `apps/web/src/components/ui.tsx`, [DESIGN.md](DESIGN.md) | ✅ |
 | 8 | Demo data | `apps/server/prisma/seed.ts` | ✅ |
 | 9 | Tests and results | `apps/server/test`, `e2e/tests`, README "Test results" | ✅ |
 | 10 | Env examples (no secrets) | `apps/server/.env.example` | ✅ |
@@ -139,6 +139,7 @@ Desktop e2e = `apps/desktop/e2e/desktop.spec.ts`, run against the development bu
 | 14 | Limitations and roadmap | [ROADMAP.md](ROADMAP.md) | ✅ |
 | 15 | Windows desktop app and installer | `apps/desktop`, `apps/desktop/release/` (git-ignored build output), [DESKTOP.md](DESKTOP.md) | ✅ (unsigned) |
 | 16 | Reporting engine docs | [REPORTING.md](REPORTING.md) | ✅ |
+| 17 | UI/UX audit and redesign: tokens, light and dark themes, shell, dashboard, responsive validation | [DESIGN.md](DESIGN.md), `e2e/scripts/capture-screens.mjs` | ✅ |
 
 ## 5. Unverified in this environment
 
@@ -146,6 +147,7 @@ Desktop e2e = `apps/desktop/e2e/desktop.spec.ts`, run against the development bu
 - ❔ SMTP email delivery: code path exists, but no mail server was used.
 - ❔ Live AI providers: only exercised with a mocked provider.
 - ❔ GitHub Issues push against the real GitHub API: `integrations.test.ts` covers it with a stubbed GitHub endpoint only.
-- ❔ Browsers other than Chromium; screen-reader behaviour (no automated accessibility audit was run).
+- ❔ Browsers other than Chromium; screen-reader behaviour (no automated accessibility audit was run). Colour contrast was calculated from the design tokens ([DESIGN.md §2](DESIGN.md)); it was not measured with an audit tool.
+- ❔ Windows display scaling at 125% and 150% was simulated by testing the equivalent CSS viewport widths, not on physical high-DPI hardware.
 - ❔ Windows 10, ARM64 devices and machines with non-English locales: the desktop build was tested only on Windows 11 x64.
 - ❔ In-place upgrade from one installed desktop version to the next: there is only one desktop release so far. The migration safety-backup path is covered by `backup.test.ts` and the boot code, not by a real upgrade.

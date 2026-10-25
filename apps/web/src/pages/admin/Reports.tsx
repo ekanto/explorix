@@ -217,7 +217,7 @@ export default function Reports() {
                             size={140}
                             thickness={20}
                             withTooltip
-                            data={d.sessionsByStatus.map((s: any) => ({ name: SESSION_STATUS[s.status]?.label ?? s.status, value: s.count, color: `${SESSION_STATUS[s.status]?.color ?? 'gray'}.6` }))}
+                            data={d.sessionsByStatus.map((s: any) => ({ name: SESSION_STATUS[s.status]?.label ?? s.status, value: s.count, color: SESSION_STATUS[s.status]?.color === 'dark' ? 'dark.3' : `${SESSION_STATUS[s.status]?.color ?? 'gray'}.6` }))}
                           />
                           <Stack gap={3}>
                             {d.sessionsByStatus.map((s: any) => (
@@ -587,11 +587,16 @@ export default function Reports() {
   );
 }
 
-const Dot = ({ color }: { color?: string }) => (
-  <Badge size="xs" color={color ?? 'gray'} circle mr={6} component="span">
-    {' '}
-  </Badge>
-);
+const Dot = ({ color }: { color?: string }) => {
+  const c = color ?? 'gray';
+  return (
+    <span
+      className="ex-legend-dot"
+      aria-hidden
+      style={{ background: `var(--mantine-color-${c}-${c === 'dark' ? 3 : 6})`, marginRight: 8, verticalAlign: 'middle', position: 'relative', top: -1 }}
+    />
+  );
+};
 
 const Muted = ({ children }: { children: ReactNode }) => (
   <Text size="sm" c="dimmed">
@@ -602,7 +607,7 @@ const Muted = ({ children }: { children: ReactNode }) => (
 function Section({ title, description, children }: { title: string; description?: ReactNode; children: ReactNode }) {
   return (
     <section>
-      <Title order={4} mb={description ? 2 : 'sm'}>
+      <Title order={2} fz={16} fw={600} mb={description ? 2 : 'sm'}>
         {title}
       </Title>
       {description && (
@@ -630,12 +635,12 @@ function Metric({ label, value, hint, def, color, to }: { label: string; value: 
   return (
     <Paper withBorder p="md" style={{ breakInside: 'avoid' }}>
       <Group justify="space-between" gap={4} wrap="nowrap">
-        <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
+        <Text className="ex-label">
           {label}
         </Text>
         {def && <KindBadge kind={def.kind} />}
       </Group>
-      <Text fz={26} fw={700} c={color} mt={4}>
+      <Text fz={26} fw={650} c={color} mt={4} className="ex-num" lh={1.15}>
         {to ? (
           <Anchor component={Link} to={to} inherit c={color ?? 'inherit'} underline="hover">
             {value}
@@ -682,7 +687,7 @@ function ReadinessPanel({ query, pid }: { query: Q; pid: string }) {
         r.readiness.length === 0 ? (
           <EmptyState title="No open milestones" description="Release readiness is computed for planned and active milestones. Create one in project settings." />
         ) : (
-          <SimpleGrid cols={{ base: 1, md: Math.min(2, r.readiness.length) }}>
+          <SimpleGrid cols={{ base: 1, lg: Math.min(2, r.readiness.length) }}>
             {r.readiness.map((m: any) => {
               const lv = lvl(m.overall);
               return (

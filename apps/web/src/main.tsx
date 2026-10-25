@@ -6,9 +6,10 @@ import { ModalsProvider } from '@mantine/modals';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ApiError } from './lib/api';
 import { AuthProvider } from './lib/auth';
-import { theme } from './theme';
+import { cssVariablesResolver, theme } from './theme';
 import { App } from './App';
 
+import '@fontsource-variable/inter';
 import '@mantine/core/styles.css';
 import '@mantine/notifications/styles.css';
 import '@mantine/dates/styles.css';
@@ -31,7 +32,7 @@ const colorSchemeManager = localStorageColorSchemeManager({ key: 'explorix-color
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <MantineProvider theme={theme} defaultColorScheme="auto" colorSchemeManager={colorSchemeManager}>
+    <MantineProvider theme={theme} cssVariablesResolver={cssVariablesResolver} defaultColorScheme="auto" colorSchemeManager={colorSchemeManager}>
       <Notifications position="top-right" limit={4} />
       <QueryClientProvider client={queryClient}>
         <ModalsProvider>

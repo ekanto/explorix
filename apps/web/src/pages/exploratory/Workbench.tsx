@@ -55,6 +55,7 @@ import {
   IconFlag,
   IconKeyboard,
   IconLink,
+  IconLock,
   IconMessage,
   IconNote,
   IconPaperclip,
@@ -395,7 +396,7 @@ function WorkbenchView({ data, refresh, refetch }: { data: any; refresh: () => v
 
           <Group gap="md" wrap="wrap" justify="flex-end" className="ex-no-print">
             <Stack gap={2} align="flex-end" miw={170}>
-              <Text className={`ex-timer${running ? ' ex-pulse' : ''}`} fz={32} fw={700} c={over ? 'orange' : undefined} aria-live="off" aria-label="Elapsed session time">
+              <Text className={`ex-timer${running ? ' ex-pulse' : ''}`} fz={30} fw={650} c={over ? 'orange' : undefined} aria-live="off" aria-label="Elapsed session time">
                 {clock(elapsed)}
               </Text>
               <Progress value={pctUsed} w={170} size="sm" color={over ? 'orange' : 'explorix'} aria-label="Timebox used" />
@@ -510,7 +511,7 @@ function WorkbenchView({ data, refresh, refetch }: { data: any; refresh: () => v
         </Alert>
       )}
       {readOnlyReason && (
-        <Alert mb="md" color="gray" title="Read-only">
+        <Alert mb="md" color="gray" variant="light" icon={<IconLock size={18} />} title="Read-only">
           {readOnlyReason}
         </Alert>
       )}
@@ -1018,7 +1019,7 @@ function MissionPanel({ s, exploredIdeas, canLog, onLogIdea }: { s: any; explore
   return (
     <Stack gap="sm">
       <Paper p="sm" bg="var(--ex-subtle)" radius="md">
-        <Text size="xs" tt="uppercase" fw={700} c="dimmed" mb={4}>
+        <Text className="ex-label" mb={4}>
           Mission
         </Text>
         <Text fw={500} className="ex-prewrap">
@@ -1038,7 +1039,7 @@ function MissionPanel({ s, exploredIdeas, canLog, onLogIdea }: { s: any; explore
       <TextBlock label="Test data" value={c.testData && <span className="ex-prewrap">{c.testData}</span>} />
       {c.testIdeas?.length > 0 && (
         <div>
-          <Text size="xs" tt="uppercase" fw={700} c="dimmed" mb={4}>
+          <Text className="ex-label" mb={4}>
             Test ideas ({c.testIdeas.filter((i: string) => exploredIdeas.has(i)).length}/{c.testIdeas.length} explored)
           </Text>
           <Stack gap={4}>
@@ -1072,7 +1073,7 @@ function MissionPanel({ s, exploredIdeas, canLog, onLogIdea }: { s: any; explore
       )}
       {c.heuristics?.length > 0 && (
         <div>
-          <Text size="xs" tt="uppercase" fw={700} c="dimmed" mb={4}>
+          <Text className="ex-label" mb={4}>
             Heuristics
           </Text>
           <Group gap={4}>
