@@ -69,7 +69,14 @@ if (stage) {
   for (const sub of ['bin', 'lib', 'share']) fs.cpSync(path.join(pgSrc, sub), path.join(out, 'pg', sub), { recursive: true });
   fs.copyFileSync(path.join(rootModules, '@embedded-postgres', 'windows-x64', 'LICENSE.md'), path.join(out, 'pg', 'LICENSE-embedded-postgres.md'));
 
-  // 5. Runtime dependency closure of the server externals.
+  // 5. Licence and third-party notices (as .txt so Windows opens them without a Markdown viewer).
+  execSync('node scripts/notices.mjs --check', { cwd: repo, stdio: 'inherit' });
+  fs.rmSync(path.join(out, 'legal'), { recursive: true, force: true });
+  fs.mkdirSync(path.join(out, 'legal'), { recursive: true });
+  fs.copyFileSync(path.join(repo, 'LICENSE'), path.join(out, 'legal', 'LICENSE.txt'));
+  fs.copyFileSync(path.join(repo, 'THIRD_PARTY_NOTICES.md'), path.join(out, 'legal', 'THIRD_PARTY_NOTICES.txt'));
+
+  // 6. Runtime dependency closure of the server externals.
   const dest = path.join(out, 'server', 'node_modules');
   fs.rmSync(dest, { recursive: true, force: true });
   const staged = new Map();

@@ -620,6 +620,9 @@ async function about() {
       `Evidence folder: ${booted?.evidenceDir ?? data.defaultEvidence}`,
       '',
       'Your projects and evidence stay on this computer.',
+      '',
+      'Copyright © 2026 Omar Faruq. Licensed under the MIT License.',
+      'Open-source components: Help > Third-Party Notices.',
     ].join('\n'),
   });
 }
@@ -662,6 +665,7 @@ function buildMenu() {
         { label: 'Where Is My Data?', click: () => void dialog.showMessageBox(mainWindow!, { type: 'info', title: 'Explorix data', message: 'Explorix keeps everything on this computer', detail: `Data folder: ${data.root}\nDatabase: ${data.pg}\nEvidence: ${booted?.evidenceDir}\nBackups: ${data.backups}\nLogs: ${data.logs}\n\nUninstalling Explorix does not delete this folder.` }) },
         { label: 'Open Logs Folder', click: () => void shell.openPath(data.logs) },
         { type: 'separator' },
+        { label: 'Third-Party Notices', click: () => void shell.openPath(res.notices) },
         { label: 'About Explorix', click: () => void about() },
       ],
     },

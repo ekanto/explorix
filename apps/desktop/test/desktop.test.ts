@@ -4,6 +4,7 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { classifyUrl, isTrustedSender, parseArgs } from '../src/contract';
 import { copyOutput, ExportError, suggestedName, withExtension } from '../src/export';
+import { resourcePaths } from '../src/paths';
 import { SettingsStore, type SecretCodec } from '../src/settings';
 
 const dirs: string[] = [];
@@ -130,5 +131,18 @@ describe('settings', () => {
     expect(again.get().keepBackups).toBe(3);
     expect(again.secret('session')).toBe(secret);
     expect(fs.readdirSync(d)).toEqual(['settings.json']);
+  });
+});
+
+describe('resources', () => {
+  it('opens the packaged third-party notices, falling back to the repository copy in development', () => {
+    const resourcesPath = tmp();
+    const packaged = resourcePaths({ packaged: true, resourcesPath, appDir: path.join(resourcesPath, 'app.asar') });
+    expect(packaged.notices).toBe(path.join(resourcesPath, 'legal', 'THIRD_PARTY_NOTICES.txt'));
+    // An unstaged development checkout (no build/resources) resolves to the repository root copy.
+    const repo = path.resolve(__dirname, '..', '..', '..');
+    const dev = resourcePaths({ packaged: false, resourcesPath, appDir: path.join(repo, 'apps', 'unstaged') });
+    expect(dev.notices).toBe(path.join(repo, 'THIRD_PARTY_NOTICES.md'));
+    expect(fs.existsSync(dev.notices)).toBe(true);
   });
 });

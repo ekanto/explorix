@@ -30,7 +30,7 @@ export function dataPaths(root: string): DataPaths {
   };
 }
 
-/** Bundled, read-only resources (server bundle, web UI, migrations, PostgreSQL binaries). */
+/** Bundled, read-only resources (server bundle, web UI, migrations, PostgreSQL binaries, licences). */
 export interface ResourcePaths {
   serverEntry: string;
   webDist: string;
@@ -38,6 +38,7 @@ export interface ResourcePaths {
   pgBin: string;
   staticDir: string;
   icon: string;
+  notices: string;
 }
 
 const firstExisting = (candidates: string[]) => candidates.find((p) => fs.existsSync(p)) ?? candidates[0]!;
@@ -56,5 +57,6 @@ export function resourcePaths(opts: { packaged: boolean; resourcesPath: string; 
     pgBin: firstExisting([path.join(res, 'pg', 'bin'), path.join(repo, 'node_modules', '@embedded-postgres', 'windows-x64', 'native', 'bin')]),
     staticDir: path.join(opts.appDir, 'static'),
     icon: path.join(opts.appDir, 'static', 'icon.png'),
+    notices: firstExisting([path.join(res, 'legal', 'THIRD_PARTY_NOTICES.txt'), path.join(repo, 'THIRD_PARTY_NOTICES.md')]),
   };
 }

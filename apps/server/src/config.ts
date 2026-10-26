@@ -23,7 +23,7 @@ const schema = z.object({
   // Set by the desktop shell: binds to loopback and rejects foreign Host headers.
   DESKTOP: z.enum(['true', 'false']).optional(),
   PDF_RENDERER: z.enum(['none', 'playwright']).default('none'),
-  APP_VERSION: z.string().default('3.0.0'),
+  APP_VERSION: z.string().default('3.0.1'),
   AI_PROVIDER: z.enum(['none', 'openai', 'mock']).default('none'),
   AI_API_KEY: z.string().optional(),
   AI_BASE_URL: z.string().default('https://api.openai.com/v1'),

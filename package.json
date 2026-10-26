@@ -1,7 +1,8 @@
 {
   "name": "explorix",
   "private": true,
-  "version": "3.0.0",
+  "version": "3.0.1",
+  "license": "MIT",
   "workspaces": [
     "apps/server",
     "apps/web",
@@ -21,7 +22,9 @@
     "test:all": "npm test && npm run test:e2e",
     "test:desktop": "npm test -w @explorix/desktop && npm run test:e2e -w @explorix/desktop",
     "desktop": "npm start -w @explorix/desktop",
-    "dist:win": "npm run dist -w @explorix/desktop"
+    "dist:win": "npm run dist -w @explorix/desktop",
+    "notices": "node scripts/notices.mjs",
+    "notices:check": "node scripts/notices.mjs --check"
   },
   "allowScripts": {
     "@embedded-postgres/windows-x64@18.4.0-beta.17": true,

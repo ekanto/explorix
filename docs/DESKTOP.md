@@ -140,8 +140,9 @@ npm run dist:win         # installer + portable → apps/desktop/release/
    - the server bundle and migrations;
    - the web UI;
    - the PostgreSQL binaries (`bin`, `lib`, `share`);
+   - `legal/LICENSE.txt` and `legal/THIRD_PARTY_NOTICES.txt` (copied from the repository root; Help > Third-Party Notices opens the latter);
    - the runtime dependency closure of the server's external packages: Prisma engine, sharp, pino, swagger-ui-express, strtok3, and their dependencies and required peers.
-3. **Verify.** The staging step scans the server bundle for every runtime `import`/`require` and **fails the build** if a module is not staged. A packaged app cannot fall back to the repository's `node_modules`.
+3. **Verify.** The staging step scans the server bundle for every runtime `import`/`require` and **fails the build** if a module is not staged. A packaged app cannot fall back to the repository's `node_modules`. It also **fails the build** if `THIRD_PARTY_NOTICES.md` no longer matches the installed dependencies; run `npm run notices` and commit the result.
 4. **Package.** electron-builder writes `app.asar` and copies the staged resources. The `afterPack` hook (`scripts/after-pack.cjs`) copies the server's `node_modules`, which electron-builder always drops from `extraResources`. Then the NSIS installer and the portable exe are built.
 
 `npm run dist:dir -w @explorix/desktop` builds only `release/win-unpacked/`, which is quicker for testing.

@@ -104,6 +104,7 @@ The seed creates two projects, **ShopFront Web (SHOP)** and **Mobile Banking API
 | `npm run desktop` | Build and launch the Electron desktop app (data in `%APPDATA%\Explorix`, or `EXPLORIX_HOME` if set) |
 | `npm run test:desktop` | Desktop unit tests and the Playwright suite that drives the real Electron app |
 | `npm run dist:win` | Windows installer and portable exe in `apps/desktop/release/` |
+| `npm run notices` | Regenerate `THIRD_PARTY_NOTICES.md` from the installed dependencies (`npm run notices:check` verifies it) |
 
 First-time e2e setup: `npx playwright install chromium`.
 
@@ -141,7 +142,7 @@ apps/web      React + Vite + TypeScript SPA (Mantine UI, TanStack Query, Tiptap)
 apps/desktop  Electron shell: main process, preload, embedded PostgreSQL boot, packaging, unit + e2e tests
 e2e           Playwright end-to-end tests
 docs          Research, PRD, architecture, API, integrations, metrics, deployment, checklist, roadmap
-scripts       Dev orchestration (scripts/dev.mjs)
+scripts       Dev orchestration (scripts/dev.mjs), third-party notices generator (scripts/notices.mjs)
 ```
 
 ## Documentation
@@ -168,3 +169,9 @@ scripts       Dev orchestration (scripts/dev.mjs)
 - Uploads are validated by content type and size. SVG and HTML are rejected, and files are served only through authorized endpoints.
 - Integration secrets are encrypted with AES-256-GCM. API tokens and webhook secrets are never returned after creation.
 - `.env` files are git-ignored. `.env.example` contains no secrets.
+
+## License
+
+Explorix is released under the [MIT License](LICENSE). Copyright (c) 2026 Omar Faruq.
+
+It bundles open-source components under their own licences, listed with full texts in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). The desktop installer and the Docker image include both files. After changing dependencies, run `npm run notices` to regenerate the notices; the desktop build fails while they are out of date.

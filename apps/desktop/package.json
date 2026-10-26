@@ -2,10 +2,10 @@
   "name": "@explorix/desktop",
   "productName": "Explorix",
   "private": true,
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "Explorix Desktop: exploratory testing and QA management with evidence-rich reporting",
   "author": "Explorix",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "main": "dist/main.cjs",
   "scripts": {
     "build": "node scripts/build.mjs",
@@ -35,7 +35,7 @@
   "build": {
     "appId": "com.explorix.desktop",
     "productName": "Explorix",
-    "copyright": "Copyright © 2026 Explorix",
+    "copyright": "Copyright © 2026 Omar Faruq",
     "executableName": "Explorix",
     "directories": {
       "output": "release",
@@ -50,7 +50,8 @@
     "extraResources": [
       { "from": "build/resources/server", "to": "server", "filter": ["**/*", "!**/*.map", "!node_modules/**"] },
       { "from": "build/resources/web", "to": "web" },
-      { "from": "build/resources/pg", "to": "pg" }
+      { "from": "build/resources/pg", "to": "pg" },
+      { "from": "build/resources/legal", "to": "legal" }
     ],
     "asar": true,
     "afterPack": "scripts/after-pack.cjs",

@@ -30,6 +30,7 @@ COPY apps/server/prisma ./apps/server/prisma
 RUN npx --workspace=@explorix/server prisma generate
 COPY --from=build /app/apps/server/dist ./apps/server/dist
 COPY --from=build /app/apps/web/dist ./apps/web/dist
+COPY LICENSE THIRD_PARTY_NOTICES.md ./
 RUN mkdir -p /data/uploads && chown -R node:node /data
 USER node
 WORKDIR /app/apps/server
