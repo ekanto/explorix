@@ -130,7 +130,7 @@ Explorix makes exploration a **first-class, measurable activity** connected to t
 | TM-3 | Revision history with diff and restore-as-new-version | P1 | Done |
 | TM-4 | Test plans grouping runs; runs with assignment, configurable statuses (Pass/Fail/Blocked/Skipped/Retest/Untested), progress, defect linking | P1 | Done |
 | TM-5 | Requirement traceability (requirements ↔ test cases ↔ charters, coverage status) | P1 | Done |
-| TM-6 | CSV import/export of test cases; run export | P1 | Done |
+| TM-6 | CSV import/export of test cases (format and step separator choice); run export as CSV, JSON, Markdown with attachments, or Word | P1 | Done |
 | TM-7 | Per-step results | P2 | Planned |
 | TM-8 | Cross-references between charters and test cases | P1 | Done |
 

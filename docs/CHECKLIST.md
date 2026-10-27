@@ -78,7 +78,7 @@ Desktop e2e = `apps/desktop/e2e/desktop.spec.ts`, run against the development bu
 - ✅ Collaboration (comments, @mentions, finding ownership, follow-up classification)
 - ✅ Notifications (in-app); 🟡 email requires SMTP configuration and was not tested against a real mail server
 - ✅ Milestones/releases
-- ✅ Manual test cases (folders, steps or Gherkin, versions with diff/restore, CSV import/export)
+- ✅ Manual test cases (folders, steps or Gherkin, versions with diff/restore, CSV import/export with a choice of format and step separator)
 - ✅ Test plans and runs (assignment, configurable statuses, defect linking, progress)
 - ✅ Audit history (org and project)
 - ✅ Reports with drill-down, CSV/JSON exports, print-friendly layout

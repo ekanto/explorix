@@ -1,12 +1,17 @@
 import { Button, Menu } from '@mantine/core';
-import { IconDownload, IconFileTypeCsv, IconJson } from '@tabler/icons-react';
+import { IconDownload, IconFileTypeCsv, IconFileTypeDocx, IconJson, IconMarkdown } from '@tabler/icons-react';
 import { download, qs } from '../lib/api';
 import { toastError } from './ui';
 
-/** CSV / JSON export button for an API export endpoint that accepts ?format=csv|json. */
-export function ExportMenu({ url, params, name, label = 'Export' }: { url: string; params?: Record<string, string | undefined>; name: string; label?: string }) {
-  const go = (format: 'csv' | 'json') =>
-    download(`${url}${qs({ ...(params ?? {}), format })}`, `${name}.${format}`).catch((e) => toastError(e, 'Export failed'));
+type Format = 'csv' | 'json' | 'md' | 'docx';
+const EXT: Record<Format, string> = { csv: 'csv', json: 'json', md: 'zip', docx: 'docx' };
+
+/**
+ * Export button for an API export endpoint that accepts ?format=csv|json.
+ * `documents` adds Markdown (ZIP with attachments) and Word, for endpoints that also accept format=md|docx.
+ */
+export function ExportMenu({ url, params, name, label = 'Export', documents = false }: { url: string; params?: Record<string, string | undefined>; name: string; label?: string; documents?: boolean }) {
+  const go = (format: Format) => download(`${url}${qs({ ...(params ?? {}), format })}`, `${name}.${EXT[format]}`).catch((e) => toastError(e, 'Export failed'));
   return (
     <Menu position="bottom-end" withinPortal>
       <Menu.Target>
@@ -15,6 +20,19 @@ export function ExportMenu({ url, params, name, label = 'Export' }: { url: strin
         </Button>
       </Menu.Target>
       <Menu.Dropdown>
+        {documents && (
+          <>
+            <Menu.Label>Report with attachments</Menu.Label>
+            <Menu.Item leftSection={<IconMarkdown size={16} />} onClick={() => go('md')}>
+              Markdown (.zip with attachments)
+            </Menu.Item>
+            <Menu.Item leftSection={<IconFileTypeDocx size={16} />} onClick={() => go('docx')}>
+              Word (.docx, images embedded)
+            </Menu.Item>
+            <Menu.Divider />
+            <Menu.Label>Latest results only</Menu.Label>
+          </>
+        )}
         <Menu.Item leftSection={<IconFileTypeCsv size={16} />} onClick={() => go('csv')}>
           CSV (spreadsheet-safe)
         </Menu.Item>

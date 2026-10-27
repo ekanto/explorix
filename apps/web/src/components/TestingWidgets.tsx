@@ -307,7 +307,24 @@ export function StepsTable({ steps }: { steps: Step[] }) {
 // CSV import
 // ---------------------------------------------------------------------------
 
-export function CsvImportModal({ opened, onClose, title, url, help, onImported }: { opened: boolean; onClose: () => void; title: string; url: string; help: ReactNode; onImported: () => void }) {
+export function CsvImportModal({
+  opened,
+  onClose,
+  title,
+  url,
+  help,
+  options,
+  onImported,
+}: {
+  opened: boolean;
+  onClose: () => void;
+  title: string;
+  url: string;
+  help: ReactNode;
+  /** Extra import settings shown above the file picker. */
+  options?: ReactNode;
+  onImported: () => void;
+}) {
   const [file, setFile] = useState<File | null>(null);
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
@@ -382,6 +399,7 @@ export function CsvImportModal({ opened, onClose, title, url, help, onImported }
           </>
         ) : (
           <>
+            {options}
             <FileInput label="CSV file" placeholder="Choose a .csv file" accept=".csv,text/csv" value={file} onChange={setFile} clearable leftSection={<IconFileUpload size={16} />} />
             <Textarea
               label="…or paste CSV"

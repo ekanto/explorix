@@ -90,6 +90,8 @@ export default function TestCases() {
 
   const [creating, setCreating] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [importFormat, setImportFormat] = useState('auto');
+  const [importSeparator, setImportSeparator] = useState('auto');
   const [bulk, setBulk] = useState<null | 'move' | 'tag' | 'run'>(null);
 
   const anyFilter = FILTER_KEYS.some((k) => sp.get(k));
@@ -415,13 +417,45 @@ export default function TestCases() {
         opened={importing}
         onClose={() => setImporting(false)}
         title="Import test cases from CSV"
-        url={p(pid, '/test-cases/import')}
+        url={p(pid, `/test-cases/import?format=${importFormat}&separator=${importSeparator}`)}
         onImported={invalidate}
+        options={
+          <Group grow align="flex-start">
+            <Select
+              label="Test case format"
+              description="How each row is stored"
+              data={[
+                { value: 'auto', label: 'Auto-detect' },
+                { value: 'steps', label: 'Steps (action + expected)' },
+                { value: 'gherkin', label: 'Gherkin (BDD)' },
+                { value: 'text', label: 'Text (free form)' },
+              ]}
+              value={importFormat}
+              onChange={(v) => setImportFormat(v ?? 'auto')}
+              allowDeselect={false}
+            />
+            <Select
+              label="Step separator"
+              description="How a Steps cell is split"
+              data={[
+                { value: 'auto', label: 'Auto-detect' },
+                { value: 'newline', label: 'New line' },
+                { value: 'pipe', label: 'Pipe ( | )' },
+                { value: 'semicolon', label: 'Semicolon ( ; )' },
+                { value: 'numbered', label: 'Inline numbering (1. … 2. …)' },
+              ]}
+              value={importSeparator}
+              onChange={(v) => setImportSeparator(v ?? 'auto')}
+              allowDeselect={false}
+            />
+          </Group>
+        }
         help={
           <>
             The first row must be a header. Recognised columns (case-insensitive): <b>Title</b> (required), Folder, Priority, Type, Status, Description, Preconditions, Steps, Expected, Test data,
-            Tags, Gherkin, Estimate (min), Automation key. <i>Steps</i> and <i>Expected</i> are newline-separated and paired line by line. Unknown folders are created at the top level. Files exported
-            here can be re-imported.
+            Tags, Gherkin, Estimate (min), Automation key. Steps and Expected are split with the chosen separator and paired in order; a single Expected value goes on the last step.{' '}
+            <i>Gherkin</i> builds a scenario from plain columns (Given = preconditions, When = steps, Then = expected) and <i>Steps</i> can turn Gherkin into steps. Unknown folders are created at
+            the top level. Files exported here can be re-imported.
           </>
         }
       />
@@ -482,6 +516,7 @@ function FolderTree({ folders, selected, onSelect, canEdit, canDelete }: { folde
         key={id ?? 'all'}
         gap={4}
         wrap="nowrap"
+        align="flex-start"
         pl={6 + depth * 14}
         pr={4}
         py={3}
@@ -495,14 +530,16 @@ function FolderTree({ folders, selected, onSelect, canEdit, canDelete }: { folde
           <Box w={18} style={{ flexShrink: 0 }} />
         )}
         <UnstyledButton onClick={() => onSelect(id)} style={{ flex: 1, minWidth: 0 }} aria-current={active ? 'true' : undefined}>
-          <Group gap={6} wrap="nowrap">
-            {icon}
-            <Text size="sm" fw={active ? 600 : 400} truncate>
+          <Group gap={6} wrap="nowrap" align="flex-start">
+            <Box component="span" display="flex" mt={2} style={{ flexShrink: 0 }}>
+              {icon}
+            </Box>
+            <Text size="sm" fw={active ? 600 : 400} className="ex-wrap-anywhere">
               {label}
             </Text>
           </Group>
         </UnstyledButton>
-        <Text size="xs" c="dimmed">
+        <Text size="xs" c="dimmed" mt={2}>
           {count}
         </Text>
         {folder && canEdit ? (

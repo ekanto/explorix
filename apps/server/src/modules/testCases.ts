@@ -6,6 +6,7 @@ import { badRequest, notFound, parse } from '../lib/errors.js';
 import { audit, diff } from '../lib/audit.js';
 import { validateCustomFields } from '../lib/customFields.js';
 import { csvToObjects, toCsv } from '../lib/csv.js';
+import { buildCaseContent, IMPORT_FORMATS, STEP_SEPARATORS } from '../lib/caseImport.js';
 import { keys, nextNumber, paging, resolveTagIds, tagNames, toArray } from '../lib/util.js';
 import { requireRole } from '../middleware/access.js';
 
@@ -267,11 +268,13 @@ testCasesRouter.get('/test-cases/export', async (req, res) => {
 /**
  * CSV import. Recognised columns (case-insensitive): Title (required), Folder, Priority, Type, Status,
  * Preconditions, Steps, Expected, Test data, Tags, Description, Gherkin, Estimate (min), Automation key.
- * "Steps"/"Expected" are newline-separated and paired by line ("1. ..." numbering is stripped).
+ * Query: format=auto|steps|gherkin|text chooses how Steps/Expected/Gherkin are stored, and
+ * separator=auto|newline|pipe|semicolon|numbered how a Steps cell is split ("1." numbering is stripped).
  */
 testCasesRouter.post('/test-cases/import', requireRole('TESTER'), async (req, res) => {
   const text = typeof req.body === 'string' ? req.body : typeof req.body?.csv === 'string' ? req.body.csv : '';
   if (!text.trim()) throw badRequest('Send CSV text (Content-Type: text/csv) or JSON {"csv": "..."}');
+  const opts = parse(z.object({ format: z.enum(IMPORT_FORMATS).default('auto'), separator: z.enum(STEP_SEPARATORS).default('auto') }), req.query);
   const rows = csvToObjects(text);
   if (rows.length > 2000) throw badRequest('Import at most 2000 test cases at a time');
   const get = (r: Record<string, string>, ...names: string[]) => {
@@ -281,7 +284,6 @@ testCasesRouter.post('/test-cases/import', requireRole('TESTER'), async (req, re
     }
     return undefined;
   };
-  const lines = (s?: string) => (s ?? '').split(/\r?\n/).map((l) => l.replace(/^\s*\d+[.)]\s*/, '').trim()).filter(Boolean);
   const errors: { row: number; message: string }[] = [];
   const pid = req.project!.id;
   let imported = 0;
@@ -292,6 +294,33 @@ testCasesRouter.post('/test-cases/import', requireRole('TESTER'), async (req, re
         const title = get(r, 'title', 'name', 'summary');
         if (!title) {
           errors.push({ row: i + 2, message: 'Missing title' });
+          continue;
+        }
+        const content = buildCaseContent(
+          {
+            title: title.slice(0, 300),
+            description: get(r, 'description'),
+            preconditions: get(r, 'preconditions', 'precondition'),
+            steps: get(r, 'steps', 'step', 'actions'),
+            expected: get(r, 'expected', 'expected result', 'expected results'),
+            gherkin: get(r, 'gherkin', 'bdd', 'scenario'),
+          },
+          opts.format,
+          opts.separator,
+        );
+        if (!content.ok) {
+          errors.push({ row: i + 2, message: content.message });
+          continue;
+        }
+        if (content.format === 'GHERKIN') {
+          const errs = validateGherkin(content.gherkin ?? '');
+          if (errs.length) {
+            errors.push({ row: i + 2, message: `Invalid Gherkin: ${errs.join('; ')}` });
+            continue;
+          }
+        }
+        if (content.steps.length > 200) {
+          errors.push({ row: i + 2, message: 'More than 200 steps' });
           continue;
         }
         let folderId: string | null = null;
@@ -306,9 +335,6 @@ testCasesRouter.post('/test-cases/import', requireRole('TESTER'), async (req, re
         }
         const prio = get(r, 'priority')?.toUpperCase();
         const status = get(r, 'status')?.toUpperCase();
-        const gherkin = get(r, 'gherkin', 'bdd');
-        const actions = lines(get(r, 'steps', 'step', 'actions'));
-        const expected = lines(get(r, 'expected', 'expected result', 'expected results'));
         const est = Number(get(r, 'estimate (min)', 'estimate'));
         const number = await nextNumber(tx, pid, 'testCaseSeq');
         const tagIds = await resolveTagIds(tx, pid, get(r, 'tags', 'labels')?.split(/[;,]/).map((t) => t.trim()).filter(Boolean));
@@ -318,19 +344,19 @@ testCasesRouter.post('/test-cases/import', requireRole('TESTER'), async (req, re
             number,
             title: title.slice(0, 300),
             folderId,
-            description: get(r, 'description') ?? null,
+            description: content.description?.slice(0, 20_000) ?? null,
             preconditions: get(r, 'preconditions', 'precondition') ?? null,
             testData: get(r, 'test data', 'data') ?? null,
             priority: priority.safeParse(prio).success ? (prio as z.infer<typeof priority>) : 'MEDIUM',
             status: ['DRAFT', 'ACTIVE', 'DEPRECATED'].includes(status ?? '') ? (status as 'DRAFT') : 'ACTIVE',
             type: get(r, 'type')?.slice(0, 60) ?? 'Functional',
-            format: gherkin ? 'GHERKIN' : actions.length ? 'STEPS' : 'TEXT',
-            gherkin: gherkin ?? null,
+            format: content.format,
+            gherkin: content.gherkin?.slice(0, 50_000) ?? null,
             estimateMinutes: Number.isFinite(est) && est > 0 ? Math.round(est) : null,
             automationKey: get(r, 'automation key') ?? null,
             createdById: req.user!.id,
             updatedById: req.user!.id,
-            steps: { create: actions.map((action, idx) => ({ position: idx + 1, action: action.slice(0, 5000), expected: expected[idx]?.slice(0, 5000) ?? null })) },
+            steps: { create: content.steps.map((s, idx) => ({ position: idx + 1, action: s.action.slice(0, 5000), expected: s.expected?.slice(0, 5000) ?? null })) },
             tags: { create: tagIds.map((tagId) => ({ tagId })) },
           },
         });

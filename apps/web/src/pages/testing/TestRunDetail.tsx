@@ -192,7 +192,7 @@ function RunView({ run }: { run: any }) {
         }
         actions={
           <>
-            <ExportMenu url={p(pid, `/test-runs/${run.id}/export`)} name={`${run.key}-results`} />
+            <ExportMenu url={p(pid, `/test-runs/${run.id}/export`)} name={`${run.key}-results`} documents />
             {canTest && !closed && (
               <Button variant="default" leftSection={<IconPlus size={16} />} onClick={() => setAdding(true)}>
                 Add cases

@@ -6,6 +6,8 @@ import { badRequest, notFound, parse } from '../lib/errors.js';
 import { audit } from '../lib/audit.js';
 import { notify } from '../lib/notify.js';
 import { toCsv } from '../lib/csv.js';
+import { config } from '../config.js';
+import { loadRunExport, markdownZip, renderRunDocx } from '../reporting/runExport.js';
 import { keys, nextNumber, paging } from '../lib/util.js';
 import { emitEvent } from '../lib/webhooks.js';
 import { assertProjectMembers, requireRole } from '../middleware/access.js';
@@ -308,6 +310,18 @@ for (const action of ['close', 'reopen'] as const) {
 }
 
 testRunsRouter.get('/test-runs/:id/export', async (req, res) => {
+  const format = String(req.query.format ?? 'csv');
+  if (format === 'md' || format === 'docx') {
+    const m = await loadRunExport(req.project!, String(req.params.id), config.APP_VERSION);
+    if (!m) throw notFound('Test run');
+    if (format === 'docx') {
+      const buf = await renderRunDocx(m);
+      res.type('application/vnd.openxmlformats-officedocument.wordprocessingml.document').setHeader('Content-Disposition', `attachment; filename="${m.key}.docx"`);
+      return void res.send(buf);
+    }
+    res.type('application/zip').setHeader('Content-Disposition', `attachment; filename="${m.key}.zip"`);
+    return void (await markdownZip(m)).pipe(res);
+  }
   const r = await prisma.testRun.findFirst({
     where: { id: String(req.params.id), projectId: req.project!.id },
     include: { items: { orderBy: { position: 'asc' }, include: { testCase: true, assignee: true, status: true, results: { orderBy: { createdAt: 'desc' }, take: 1, include: { createdBy: true } } } } },

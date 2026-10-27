@@ -2,7 +2,7 @@
   "name": "@explorix/desktop",
   "productName": "Explorix",
   "private": true,
-  "version": "3.0.1",
+  "version": "4.0.0",
   "description": "Explorix Desktop: exploratory testing and QA management with evidence-rich reporting",
   "author": "Explorix",
   "license": "MIT",

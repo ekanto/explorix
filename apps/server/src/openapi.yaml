@@ -480,7 +480,10 @@ paths:
     parameters: [{ $ref: '#/components/parameters/projectId' }]
     post:
       tags: [Test cases]
-      summary: '[TESTER] Import CSV. Columns: Title*, Folder (a/b/c), Priority, Type, Preconditions, Steps, Expected (newline-paired), Gherkin, Tags (comma), Estimate (min)'
+      summary: '[TESTER] Import CSV. Columns: Title*, Folder (a/b/c), Priority, Type, Preconditions, Steps, Expected, Gherkin, Tags (comma), Estimate (min)'
+      parameters:
+        - { name: format, in: query, description: 'How rows are stored. auto picks Gherkin, then Steps, then Text from the columns present; gherkin builds a scenario from Preconditions/Steps/Expected; steps can turn Gherkin into steps; text puts steps and expected results in the description.', schema: { type: string, enum: [auto, steps, gherkin, text], default: auto } }
+        - { name: separator, in: query, description: 'How a Steps (and Expected) cell is split. Numbering such as "1." is stripped. A single Expected value goes on the last step.', schema: { type: string, enum: [auto, newline, pipe, semicolon, numbered], default: auto } }
       requestBody: { content: { text/csv: { schema: { type: string } } } }
       responses: { '200': { description: 'Import summary with per-row errors' } }
   /api/projects/{projectId}/test-cases/{id}:
@@ -517,8 +520,8 @@ paths:
     parameters: [{ $ref: '#/components/parameters/projectId' }, { $ref: '#/components/parameters/id' }]
     post: { tags: [Test runs], summary: '[TESTER] Close run (read-only afterwards)', responses: { '200': { description: OK } } }
   /api/projects/{projectId}/test-runs/{id}/export:
-    parameters: [{ $ref: '#/components/parameters/projectId' }, { $ref: '#/components/parameters/id' }, { $ref: '#/components/parameters/format' }]
-    get: { tags: [Test runs], summary: Export run results, responses: { '200': { description: OK } } }
+    parameters: [{ $ref: '#/components/parameters/projectId' }, { $ref: '#/components/parameters/id' }, { name: format, in: query, schema: { type: string, enum: [csv, json, md, docx], default: csv } }]
+    get: { tags: [Test runs], summary: 'Export run results. csv/json: latest result per case. md: ZIP with RUN-n.md and attachments/ (full result history, steps or Gherkin). docx: Word document with the same content, images embedded and other files listed.', responses: { '200': { description: OK } } }
 
   /api/projects/{projectId}/automation/runs:
     parameters: [{ $ref: '#/components/parameters/projectId' }]

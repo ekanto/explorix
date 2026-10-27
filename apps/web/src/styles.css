@@ -665,6 +665,12 @@ a {
   word-break: break-word;
 }
 
+/* Long unbroken names (folder paths, keys) wrap instead of overflowing. */
+.ex-wrap-anywhere {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .ex-row-link {
   cursor: pointer;
 }
