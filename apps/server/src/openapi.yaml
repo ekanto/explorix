@@ -474,8 +474,8 @@ paths:
     get: { tags: [Test cases], summary: 'Test case repository (?folderId, q, priority, tag, status, archived)', responses: { '200': { description: OK } } }
     post: { tags: [Test cases], summary: '[TESTER] Create test case (STEPS or GHERKIN format)', responses: { '201': { description: Created } } }
   /api/projects/{projectId}/test-cases/export:
-    parameters: [{ $ref: '#/components/parameters/projectId' }, { $ref: '#/components/parameters/format' }]
-    get: { tags: [Test cases], summary: 'Export as CSV (re-importable) or JSON', responses: { '200': { description: OK } } }
+    parameters: [{ $ref: '#/components/parameters/projectId' }, { name: format, in: query, schema: { type: string, enum: [csv, json, md, docx], default: csv } }]
+    get: { tags: [Test cases], summary: 'Export the filtered test cases (same filters as the list). csv (re-importable) or json: case data. md: ZIP with KEY-test-cases.md and attachments/, grouped by folder, with the latest result from each run. docx: Word document with the same content, images embedded and other files listed.', responses: { '200': { description: OK } } }
   /api/projects/{projectId}/test-cases/import:
     parameters: [{ $ref: '#/components/parameters/projectId' }]
     post:

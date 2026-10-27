@@ -136,7 +136,7 @@ export default function TestCases() {
         subtitle="Reusable scripted and BDD test cases, organised in folders and executed in test runs."
         actions={
           <>
-            <ExportMenu url={p(pid, '/test-cases/export')} params={filters} name="test-cases" />
+            <ExportMenu url={p(pid, '/test-cases/export')} params={filters} name="test-cases" documents dataLabel="Test case data only" />
             {canEdit && (
               <>
                 <Button variant="default" leftSection={<IconUpload size={16} />} onClick={() => setImporting(true)}>

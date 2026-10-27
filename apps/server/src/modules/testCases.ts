@@ -9,6 +9,8 @@ import { csvToObjects, toCsv } from '../lib/csv.js';
 import { buildCaseContent, IMPORT_FORMATS, STEP_SEPARATORS } from '../lib/caseImport.js';
 import { keys, nextNumber, paging, resolveTagIds, tagNames, toArray } from '../lib/util.js';
 import { requireRole } from '../middleware/access.js';
+import { config } from '../config.js';
+import { casesMarkdownZip, folderPaths, loadCasesExport, renderCasesDocx } from '../reporting/testExport.js';
 
 /** Mounted at the project root: /test-folders and /test-cases. */
 export const testCasesRouter = Router({ mergeParams: true });
@@ -234,8 +236,34 @@ testCasesRouter.post('/test-cases', requireRole('TESTER'), async (req, res) => {
   res.status(201).json({ testCase: serialize(full) });
 });
 
+/** Human-readable description of what a filtered document export contains. */
+async function exportScope(projectId: string, q: Record<string, string>) {
+  let scope = 'All test cases';
+  if (q.folderId === 'none') scope = 'Unfiled';
+  else if (q.folderId) scope = `Folder: ${(await folderPaths(projectId)).paths.get(q.folderId) ?? 'Unknown'}`;
+  const notes = [
+    q.archived === 'true' && 'archived',
+    q.status && `status ${toArray(q.status).join(', ')}`,
+    q.priority && `priority ${toArray(q.priority).join(', ')}`,
+    q.type && `type ${q.type}`,
+    q.tag && `tag ${toArray(q.tag).join(', ')}`,
+    q.q && `matching "${q.q}"`,
+  ].filter(Boolean);
+  return notes.length ? `${scope} (${notes.join('; ')})` : scope;
+}
+
 testCasesRouter.get('/test-cases/export', async (req, res) => {
   const q = req.query as Record<string, string>;
+  if (q.format === 'md' || q.format === 'docx') {
+    const m = await loadCasesExport(req.project!, buildWhere(req, q), await exportScope(req.project!.id, q), config.APP_VERSION);
+    if (q.format === 'docx') {
+      const buf = await renderCasesDocx(m);
+      res.type('application/vnd.openxmlformats-officedocument.wordprocessingml.document').setHeader('Content-Disposition', `attachment; filename="${m.fileBase}.docx"`);
+      return void res.send(buf);
+    }
+    res.type('application/zip').setHeader('Content-Disposition', `attachment; filename="${m.fileBase}.zip"`);
+    return void (await casesMarkdownZip(m)).pipe(res);
+  }
   const cases = await prisma.testCase.findMany({ where: buildWhere(req, q), orderBy: { number: 'asc' }, include: detailInclude, take: 10_000 });
   const rows = cases.map(serialize);
   if (q.format === 'json') {

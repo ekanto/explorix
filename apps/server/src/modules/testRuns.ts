@@ -7,7 +7,7 @@ import { audit } from '../lib/audit.js';
 import { notify } from '../lib/notify.js';
 import { toCsv } from '../lib/csv.js';
 import { config } from '../config.js';
-import { loadRunExport, markdownZip, renderRunDocx } from '../reporting/runExport.js';
+import { loadRunExport, renderRunDocx, runMarkdownZip } from '../reporting/testExport.js';
 import { keys, nextNumber, paging } from '../lib/util.js';
 import { emitEvent } from '../lib/webhooks.js';
 import { assertProjectMembers, requireRole } from '../middleware/access.js';
@@ -320,7 +320,7 @@ testRunsRouter.get('/test-runs/:id/export', async (req, res) => {
       return void res.send(buf);
     }
     res.type('application/zip').setHeader('Content-Disposition', `attachment; filename="${m.key}.zip"`);
-    return void (await markdownZip(m)).pipe(res);
+    return void (await runMarkdownZip(m)).pipe(res);
   }
   const r = await prisma.testRun.findFirst({
     where: { id: String(req.params.id), projectId: req.project!.id },

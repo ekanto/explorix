@@ -10,7 +10,7 @@ const EXT: Record<Format, string> = { csv: 'csv', json: 'json', md: 'zip', docx:
  * Export button for an API export endpoint that accepts ?format=csv|json.
  * `documents` adds Markdown (ZIP with attachments) and Word, for endpoints that also accept format=md|docx.
  */
-export function ExportMenu({ url, params, name, label = 'Export', documents = false }: { url: string; params?: Record<string, string | undefined>; name: string; label?: string; documents?: boolean }) {
+export function ExportMenu({ url, params, name, label = 'Export', documents = false, dataLabel = 'Latest results only' }: { url: string; params?: Record<string, string | undefined>; name: string; label?: string; documents?: boolean; dataLabel?: string }) {
   const go = (format: Format) => download(`${url}${qs({ ...(params ?? {}), format })}`, `${name}.${EXT[format]}`).catch((e) => toastError(e, 'Export failed'));
   return (
     <Menu position="bottom-end" withinPortal>
@@ -30,7 +30,7 @@ export function ExportMenu({ url, params, name, label = 'Export', documents = fa
               Word (.docx, images embedded)
             </Menu.Item>
             <Menu.Divider />
-            <Menu.Label>Latest results only</Menu.Label>
+            <Menu.Label>{dataLabel}</Menu.Label>
           </>
         )}
         <Menu.Item leftSection={<IconFileTypeCsv size={16} />} onClick={() => go('csv')}>
